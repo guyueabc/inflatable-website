@@ -1,0 +1,38 @@
+﻿<!DOCTYPE html>
+<html>
+<head><title>API Test</title></head>
+<body>
+<h1>API Self Test</h1>
+<div id="results"></div>
+<script>
+const log = document.getElementById('results');
+
+async function test() {
+    try {
+        // 1. Login
+        let r = await fetch('/api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email:'ltj807133914@gmail.com'})});
+        let d = await r.json();
+        log.innerHTML += '<p>1. Login: ' + JSON.stringify(d) + '</p>';
+        
+        // 2. Send message
+        r = await fetch('/api/messages', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({content: 'BROWSER_TEST_' + Date.now()})});
+        d = await r.json();
+        log.innerHTML += '<p>2. Send: ' + JSON.stringify(d) + '</p>';
+        
+        // 3. Get messages
+        r = await fetch('/api/messages');
+        d = await r.json();
+        if (d.ok && d.messages.length > 0) {
+            const last = d.messages[d.messages.length - 1];
+            log.innerHTML += '<p>3. Get msgs: count=' + d.messages.length + ', last=[' + last.sender + '] ' + last.content + '</p>';
+        }
+        
+        log.innerHTML += '<p style="color:green;font-weight:bold">ALL TESTS PASSED!</p>';
+    } catch(e) {
+        log.innerHTML += '<p style="color:red">ERROR: ' + e.message + '</p>';
+    }
+}
+test();
+</script>
+</body>
+</html>

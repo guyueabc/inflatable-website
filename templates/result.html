@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your 3D Model is Ready! | InflatableModel.CN</title>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+        }
+    }
+    </script>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --border: #334155;
+            --text: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --primary: #6366f1;
+            --primary-light: rgba(99,102,241,0.1);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg); color: var(--text);
+            min-height: 100vh;
+        }
+        .navbar {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 24px; height: 60px;
+            background: var(--surface); border-bottom: 1px solid var(--border);
+            position: sticky; top: 0; z-index: 100;
+            transition: transform 0.3s ease;
+        }
+        .navbar.hidden-nav { transform: translateY(-100%); }
+        .logo { font-size: 1.2rem; font-weight: 800; color: var(--text); text-decoration: none; }
+        .logo span { color: var(--primary); }
+
+        .result-container {
+            max-width: 1200px; margin: 0 auto; padding: 32px 24px;
+        }
+        .result-header {
+            text-align: center; margin-bottom: 32px;
+        }
+        .result-header h1 {
+            font-size: 2rem; font-weight: 700; margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--primary), #a78bfa);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .result-header p { color: var(--text-secondary); font-size: 1rem; }
+
+        .result-grid {
+            display: grid; grid-template-columns: 1fr 380px; gap: 24px;
+        }
+        @media (max-width: 860px) {
+            .result-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Left: 3D Preview */
+        .preview-panel {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 12px; overflow: hidden;
+            position: relative;
+        }
+        .preview-header {
+            padding: 14px 20px; border-bottom: 1px solid var(--border);
+            font-size: 1rem; font-weight: 600;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        #model-viewer {
+            width: 100%; height: 520px; background: #0a0f1a;
+            position: relative;
+        }
+        .preview-footer {
+            padding: 10px 20px; border-top: 1px solid var(--border);
+            font-size: .75rem; color: var(--text-secondary);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; }
+        .format-badge {
+            padding: 2px 8px; border-radius: 4px; background: var(--primary-light);
+            color: var(--primary); font-size: .6875rem; font-weight: 600;
+        }
+
+        /* Fullscreen Button */
+        .btn-fullscreen {
+            display: flex; align-items: center; justify-content: center;
+            gap: 6px; padding: 6px 14px; border-radius: 8px;
+            background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+            color: var(--text-secondary); font-size: .75rem; font-weight: 500;
+            cursor: pointer; font-family: inherit;
+            transition: all .15s;
+        }
+        .btn-fullscreen:hover { background: rgba(255,255,255,0.15); color: var(--text); }
+
+        /* Loading Spinner */
+        .loading-overlay {
+            position: absolute; inset: 0; z-index: 10;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: #0a0f1a; gap: 16px;
+            transition: opacity 0.4s ease;
+            pointer-events: none;
+        }
+        .loading-overlay.hidden { opacity: 0; }
+        .spinner {
+            width: 48px; height: 48px;
+            border: 4px solid rgba(99,102,241,0.15);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { color: var(--text-secondary); font-size: .875rem; font-weight: 500; }
+
+        /* Fullscreen Mode */
+        .fullscreen-mode {
+            position: fixed !important; inset: 0 !important;
+            width: 100vw !important; height: 100vh !important;
+            z-index: 9999 !important; border-radius: 0 !important;
+            border: none !important;
+        }
+        .fullscreen-mode #model-viewer {
+            height: 100vh !important;
+        }
+        .fullscreen-mode .preview-header,
+        .fullscreen-mode .preview-footer {
+            display: none;
+        }
+        .fullscreen-backdrop {
+            display: none;
+        }
+        .fullscreen-mode .fullscreen-backdrop {
+            display: flex;
+            position: absolute; top: 16px; right: 16px; z-index: 20;
+            align-items: center; gap: 12px;
+        }
+        .btn-exit-fullscreen {
+            display: flex; align-items: center; justify-content: center;
+            width: 40px; height: 40px; border-radius: 50%;
+            background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.15);
+            color: #fff; font-size: 1.25rem; cursor: pointer;
+            transition: all .15s; font-family: inherit;
+        }
+        .btn-exit-fullscreen:hover { background: rgba(255,255,255,0.2); }
+        .fullscreen-hint {
+            color: rgba(255,255,255,0.5); font-size: .75rem;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Right: Actions */
+        .actions-panel {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 12px; padding: 24px;
+            display: flex; flex-direction: column; gap: 20px;
+        }
+        .actions-panel h3 { font-size: 1.1rem; font-weight: 600; }
+        .actions-panel p { color: var(--text-secondary); font-size: .875rem; line-height: 1.6; }
+
+        .download-group {
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .btn-download {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 12px 20px; border-radius: 10px; font-weight: 600;
+            font-size: .875rem; cursor: pointer; font-family: inherit;
+            text-decoration: none; transition: all .15s; border: none;
+        }
+        .btn-dl-glb { background: var(--primary); color: #fff; }
+        .btn-dl-glb:hover { background: #4f46e5; transform: translateY(-1px); }
+        .btn-dl-obj {
+            background: transparent; color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+        .btn-dl-obj:hover { border-color: var(--primary); color: var(--primary); }
+
+        .btn-chat {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 12px 20px; border-radius: 10px; font-weight: 600;
+            font-size: .875rem; cursor: pointer; font-family: inherit; text-decoration: none;
+            background: #10b981; color: #fff; transition: all .15s; border: none;
+        }
+        .btn-chat:hover { background: #059669; transform: translateY(-1px); }
+
+        .info-rows { display: flex; flex-direction: column; gap: 10px; }
+        .info-row { display: flex; justify-content: space-between; align-items: center; }
+        .info-row .lbl { color: var(--text-secondary); font-size: .8125rem; }
+        .info-row .val { color: var(--text); font-size: .8125rem; font-weight: 500; }
+
+        .countdown-bar {
+            display: flex; align-items: center; gap: 8px;
+            padding: 12px 16px; border-radius: 10px;
+            background: var(--primary-light); border: 1px solid rgba(99,102,241,0.2);
+            font-size: .8125rem; color: var(--text-secondary); flex-wrap: wrap;
+        }
+        .countdown-num {
+            font-weight: 700; font-size: 1.25rem; color: var(--primary);
+            font-variant-numeric: tabular-nums;
+        }
+        .btn-cancel {
+            margin-left: auto; padding: 6px 12px; border-radius: 6px;
+            background: transparent; border: 1px solid var(--border);
+            color: var(--text-secondary); font-size: .75rem; cursor: pointer;
+            font-family: inherit; transition: all .15s;
+        }
+        .btn-cancel:hover { border-color: var(--primary); color: var(--primary); }
+        .note {
+            font-size: .75rem; color: var(--text-secondary);
+            line-height: 1.5; text-align: center;
+        }
+
+        /* Body fullscreen lock */
+        body.fullscreen-active { overflow: hidden; }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar" id="navbar">
+        <a href="/" class="logo"><span>Inflatable</span>Model</a>
+        <div style="font-size:.8125rem;color:var(--text-secondary);">3D Preview</div>
+    </nav>
+
+    <!-- Main Result -->
+    <div class="result-container" id="resultContainer">
+        <div class="result-header">
+            <h1>Your 3D Model is Ready!</h1>
+            <p>Task <strong style="color:var(--primary);">{{ task.job_id[:16] }}...</strong> completed successfully</p>
+        </div>
+
+        <div class="result-grid">
+            <!-- Left: Preview -->
+            <div class="preview-panel" id="previewPanel">
+                <div class="preview-header">
+                    <span>Model Preview</span>
+                    <button class="btn-fullscreen" id="btnFullscreen" onclick="enterFullscreen()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                        Fullscreen
+                    </button>
+                </div>
+                <div id="model-viewer">
+                    <!-- Loading Overlay -->
+                    <div class="loading-overlay" id="loadingOverlay">
+                        <div class="spinner"></div>
+                        <div class="loading-text">模型加载中...</div>
+                    </div>
+                </div>
+                <!-- Fullscreen backdrop controls -->
+                <div class="fullscreen-backdrop" id="fullscreenBackdrop">
+                    <span class="fullscreen-hint">ESC to exit</span>
+                    <button class="btn-exit-fullscreen" onclick="exitFullscreen()" title="Close fullscreen">&times;</button>
+                </div>
+                <div class="preview-footer">
+                    <span class="status-dot"></span>
+                    <span>Interactive 3D</span>
+                    <span class="format-badge">GLB</span>
+                </div>
+            </div>
+
+            <!-- Right: Actions -->
+            <div class="actions-panel">
+                <div>
+                    <h3>Download Model</h3>
+                    <p>Get the 3D model files for your inflatable product.</p>
+                </div>
+                <div class="download-group">
+                    <a href="{{ task.result_url or '#' }}" class="btn-download btn-dl-glb" download>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Download GLB
+                    </a>
+                    <a href="{{ task.result_url.replace('/models/','/exports/').replace('.glb','.obj') if task.result_url else '#' }}" class="btn-download btn-dl-obj" download>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Download OBJ
+                    </a>
+                </div>
+                <a href="/messages" class="btn-chat">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    Go to Chat
+                </a>
+
+                <div class="info-rows">
+                    <div class="info-row">
+                        <span class="lbl">Task ID</span>
+                        <span class="val" style="font-size:.6875rem;word-break:break-all;">{{ task.job_id[:16] }}...</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="lbl">Completed</span>
+                        <span class="val">{{ task.completed_at or 'Just now' }}</span>
+                    </div>
+
+                    <div class="countdown-bar" id="countdownBar">
+                        <span>Redirecting to chat in</span>
+                        <span class="countdown-num" id="countdownNum">10</span>
+                        <span>s</span>
+                        <button class="btn-cancel" onclick="cancelCountdown()">Stay here</button>
+                    </div>
+                    <p class="note">One model per account. Additional models require consultation.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const modelUrl = "{{ task.result_url or '' }}";
+    let countdown = 10;
+    let countdownTimer = null;
+    let isFullscreen = false;
+    let prevPreviewState = null;
+
+    // Countdown
+    const countdownEl = document.getElementById('countdownNum');
+    const barEl = document.getElementById('countdownBar');
+
+    function tick() {
+        countdown--;
+        countdownEl.textContent = countdown;
+        if (countdown <= 0) {
+            clearInterval(countdownTimer);
+            window.location.href = '/messages';
+        }
+    }
+
+    function cancelCountdown() {
+        clearInterval(countdownTimer);
+        barEl.innerHTML = '<span style="color:var(--text-secondary);">Countdown cancelled. <a href="/messages" style="color:var(--primary);">Go to chat</a> when ready.</span>';
+    }
+
+    countdownTimer = setInterval(tick, 1000);
+
+    // --- Fullscreen Functions ---
+    const previewPanel = document.getElementById('previewPanel');
+    const navbar = document.getElementById('navbar');
+    const resultContainer = document.getElementById('resultContainer');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+
+    function enterFullscreen() {
+        if (isFullscreen) return;
+        isFullscreen = true;
+        previewPanel.classList.add('fullscreen-mode');
+        navbar.classList.add('hidden-nav');
+        document.body.classList.add('fullscreen-active');
+        // Resize renderer to fill viewport
+        resizeRenderer();
+    }
+
+    function exitFullscreen() {
+        if (!isFullscreen) return;
+        isFullscreen = false;
+        previewPanel.classList.remove('fullscreen-mode');
+        navbar.classList.remove('hidden-nav');
+        document.body.classList.remove('fullscreen-active');
+        resizeRenderer();
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && isFullscreen) {
+            exitFullscreen();
+        }
+    });
+
+    // --- 3D Viewer ---
+    const viewerEl = document.getElementById('model-viewer');
+
+    function resizeRenderer() {
+        if (renderer) {
+            const w = viewerEl.clientWidth;
+            const h = viewerEl.clientHeight;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+        }
+    }
+
+    let scene, camera, renderer;
+
+    if (modelUrl && (modelUrl.includes('.glb') || modelUrl.includes('/models/'))) {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0f1a);
+        camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(viewerEl.clientWidth, viewerEl.clientHeight);
+        viewerEl.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.08;
+        camera.position.set(2, 2, 2);
+        controls.update();
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+        dirLight.position.set(5, 10, 7);
+        scene.add(dirLight);
+        const dirLight2 = new THREE.DirectionalLight(0x6366f1, 0.3);
+        dirLight2.position.set(-3, 2, -5);
+        scene.add(dirLight2);
+
+        const loader = new THREE.GLTFLoader();
+        loader.load(modelUrl, (gltf) => {
+            scene.add(gltf.scene);
+            const box = new THREE.Box3().setFromObject(gltf.scene);
+            const center = box.getCenter(new THREE.Vector3());
+            const size = box.getSize(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const fov = camera.fov * (Math.PI / 180);
+            const cameraZ = Math.abs(maxDim / Math.tan(fov / 2));
+            camera.position.copy(center);
+            camera.position.z += cameraZ * 1.5;
+            controls.target = center;
+            controls.update();
+            // Hide loading overlay after model renders
+            loadingOverlay.classList.add('hidden');
+        }, undefined, () => {
+            viewerEl.innerHTML = `
+                <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-secondary);text-align:center;">
+                    <div>
+                        <div style="font-size:3rem;margin-bottom:8px;">📝</div>
+                        <p style="font-size:.875rem;">Model preview unavailable.<br>Download the model using the buttons on the right.</p>
+                    </div>
+                </div>`;
+            loadingOverlay.classList.add('hidden');
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Use ResizeObserver for reliable resize in both normal and fullscreen
+        const resizeObserver = new ResizeObserver(() => { resizeRenderer(); });
+        resizeObserver.observe(viewerEl);
+    } else {
+        viewerEl.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-secondary);text-align:center;">
+                <div>
+                    <div style="font-size:3rem;margin-bottom:8px;">🔮</div>
+                    <p style="font-size:.875rem;">Preview image available in chat.<br>Download buttons on the right.</p>
+                </div>
+            </div>`;
+        loadingOverlay.classList.add('hidden');
+    }
+</script>
+</body>
+</html>

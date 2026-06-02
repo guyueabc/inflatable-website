@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: inflatable-model
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+      - key: FLASK_SECRET_KEY
+        sync: false
+      - key: HUNYUAN_API_KEY
+        sync: false
+      - key: HUNYUAN_ENDPOINT
+        value: https://api.ai3d.cloud.tencent.com
+      - key: HUNYUAN_MODEL
+        value: "3.0"
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: MAIL_SERVER
+        value: smtp.mxhichina.com
+      - key: MAIL_PORT
+        value: "465"
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false

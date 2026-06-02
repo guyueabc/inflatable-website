@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — InflatableModel.CN</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --border: #334155;
+            --text: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --primary: #6366f1;
+            --primary-light: rgba(99,102,241,0.1);
+        }
+
+        /* SMTP Banner */
+        .smtp-banner {
+            padding: 8px 24px; text-align: center; font-size: .75rem;
+            font-weight: 500; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        .smtp-banner.active {
+            background: rgba(16,185,129,0.1); color: #10b981;
+            border-bottom: 1px solid rgba(16,185,129,0.2);
+        }
+        .smtp-banner.inactive {
+            background: rgba(245,158,11,0.1); color: #f59e0b;
+            border-bottom: 1px solid rgba(245,158,11,0.2);
+        }
+
+        .btn-send-code {
+            padding: 14px 28px !important;
+            font-size: 16px !important;
+            border-radius: 8px !important;
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border: none !important;
+            color: #fff !important;
+            font-weight: 600 !important;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-send-code:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-send-code:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .verify-code-group {
+            display: none;
+            margin-top: 16px;
+            padding: 16px;
+            background: rgba(102,126,234,0.08);
+            border-radius: 8px;
+            border: 1px solid rgba(102,126,234,0.2);
+        }
+        .verify-code-group.active { display: block; }
+        .verify-code-input {
+            width: 100% !important;
+            padding: 14px !important;
+            font-size: 24px !important;
+            text-align: center;
+            letter-spacing: 8px;
+            border-radius: 8px;
+            border: 2px solid #667eea !important;
+            outline: none;
+            font-family: monospace;
+        }
+        .resend-link {
+            color: #667eea;
+            cursor: pointer;
+            text-decoration: underline;
+            font-size: 13px;
+            margin-top: 8px;
+            display: inline-block;
+        }
+        .google-section {
+            display: {{ 'block' if google_client_id else 'none' }};
+        }
+        .google-disabled-note {
+            display: {{ 'none' if google_client_id else 'block' }};
+            text-align: center;
+            color: #94a3b8;
+            font-size: 13px;
+            padding: 8px;
+        }
+    </style>
+</head>
+<body>
+    <!-- SMTP Status Banner -->
+    <div class="smtp-banner {{ 'active' if smtp_configured else 'inactive' }}">
+        {% if smtp_configured %}
+            SMTP Email Service: Active — verification codes will be sent to your email
+        {% else %}
+            SMTP Email Service: Development Mode — verification codes are printed in the server terminal
+        {% endif %}
+    </div>
+
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo">Inflatable<span>Model</span></a>
+            <div class="nav-links">
+                <a href="/login" class="active">Login</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="login-layout">
+        <div class="card">
+            <!-- Left: Form -->
+            <div class="login-form-col">
+                <h2 class="section-title">Welcome</h2>
+                <p class="section-subtitle">Sign in to generate your 3D inflatable model</p>
+
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="email">Email <span class="required">*</span></label>
+                        <input type="email" id="email" placeholder="your@email.com" required autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Phone Number <span class="optional">(optional)</span></label>
+                        <input type="tel" id="phone" placeholder="+1 234 567 8900" autocomplete="tel">
+                    </div>
+                    <div class="form-group">
+                        <label for="name">Name <span class="optional">(optional)</span></label>
+                        <input type="text" id="name" placeholder="Your name" autocomplete="name">
+                    </div>
+                    <div class="form-group">
+                        <label for="company">Company <span class="optional">(optional)</span></label>
+                        <input type="text" id="company" placeholder="Your company" autocomplete="organization">
+                    </div>
+                    <button type="submit" class="btn-send-code" id="submitBtn">Send Verification Code</button>
+                    <div id="loginError" class="error-msg" style="display:none;"></div>
+                </form>
+
+                <!-- Inline Verification Code -->
+                <div class="verify-code-group" id="verifyGroup">
+                    <p style="margin-bottom:8px;color:#64748b;font-size:14px;">
+                        A 6-digit code was sent to <strong id="verifyEmailDisplay"></strong>
+                    </p>
+                    <div id="devCodeDisplay" style="display:none;text-align:center;padding:8px;background:rgba(99,102,241,0.1);border-radius:6px;margin-bottom:8px;font-size:14px;color:var(--primary);font-weight:600;letter-spacing:2px;"></div>
+                    <input type="text" id="verifyCode" class="verify-code-input" maxlength="6" placeholder="123456">
+                    <button class="btn-send-code" onclick="submitVerifyCode()" id="verifyBtn" style="margin-top:12px;">Verify</button>
+                    <div id="verifyError" class="error-msg" style="display:none;"></div>
+                    <a class="resend-link" onclick="resendCode()">Resend code</a>
+                </div>
+
+                <div class="divider">or</div>
+
+                <!-- Google Login -->
+                <div class="google-section" id="googleSignIn">
+                    <div id="g_id_onload"
+                         data-client_id="{{ google_client_id }}"
+                         data-context="signin"
+                         data-ux_mode="popup"
+                         data-callback="handleGoogleCredential"
+                         data-auto_prompt="false">
+                    </div>
+                    <div class="g_id_signin"
+                         data-type="standard"
+                         data-shape="rectangular"
+                         data-theme="outline"
+                         data-text="signin_with"
+                         data-size="large"
+                         data-logo_alignment="left"
+                         style="display:flex;justify-content:center;">
+                    </div>
+                    <p id="googleError" class="error-msg" style="display:none;text-align:center;"></p>
+                    <p id="googleSuccess" class="success-msg" style="display:none;text-align:center;"></p>
+                </div>
+                <p class="google-disabled-note" id="googleDisabledNote">Google sign-in is not configured. Please use email login above.</p>
+            </div>
+
+            <!-- Right: Brand Info -->
+            <div class="login-brand-col">
+                <h3>InflatableModel.CN</h3>
+                <p>AI-powered 3D inflatable castle generation. Upload a reference image or describe your idea — our AI creates a detailed 3D model ready for manufacturing.</p>
+                <p style="margin-top:16px;">One free generation per account. Get your custom inflatable castle model in minutes.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script>
+        let currentVerifyEmail = '';
+
+        function handleGoogleCredential(response) {
+            const errEl = document.getElementById('googleError');
+            const sucEl = document.getElementById('googleSuccess');
+            errEl.style.display = 'none';
+            sucEl.style.display = 'none';
+
+            fetch('/api/auth/google', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ credential: response.credential })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.ok) {
+                    sucEl.textContent = 'Google login successful. Redirecting...';
+                    sucEl.style.display = 'block';
+                    setTimeout(() => { window.location.href = '/generate'; }, 800);
+                } else {
+                    errEl.textContent = data.error || 'Google login failed.';
+                    errEl.style.display = 'block';
+                }
+            })
+            .catch(() => {
+                errEl.textContent = 'Network error. Please try again.';
+                errEl.style.display = 'block';
+            });
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const name = document.getElementById('name').value.trim();
+            const company = document.getElementById('company').value.trim();
+            const btn = document.getElementById('submitBtn');
+            const errEl = document.getElementById('loginError');
+
+            errEl.style.display = 'none';
+
+            if (!email) {
+                errEl.textContent = 'Email is required.';
+                errEl.style.display = 'block';
+                return;
+            }
+            if (!email.includes('@') || !email.split('@')[1].includes('.')) {
+                errEl.textContent = 'Please enter a valid email address.';
+                errEl.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+
+            try {
+                const resp = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, phone, name, company })
+                });
+                const data = await resp.json();
+
+                if (data.ok) {
+                    if (data.verified) {
+                        window.location.href = '/generate';
+                        return;
+                    }
+                    currentVerifyEmail = email;
+                    document.getElementById('verifyEmailDisplay').textContent = email;
+                    if (data.dev_code) {
+                        document.getElementById('devCodeDisplay').textContent = 'DEV MODE: ' + data.dev_code;
+                        document.getElementById('devCodeDisplay').style.display = 'block';
+                    }
+                    document.getElementById('verifyGroup').classList.add('active');
+                    document.getElementById('verifyCode').focus();
+                } else {
+                    errEl.textContent = data.error || 'Login failed.';
+                    errEl.style.display = 'block';
+                }
+            } catch (err) {
+                errEl.textContent = 'Network error. Please try again.';
+                errEl.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Send Verification Code';
+            }
+        });
+
+        document.getElementById('verifyCode').addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6);
+        });
+
+        async function submitVerifyCode() {
+            const code = document.getElementById('verifyCode').value.trim();
+            const verrEl = document.getElementById('verifyError');
+            verrEl.style.display = 'none';
+
+            if (code.length !== 6) {
+                verrEl.textContent = 'Please enter the 6-digit code.';
+                verrEl.style.display = 'block';
+                return;
+            }
+
+            const btn = document.getElementById('verifyBtn');
+            btn.disabled = true;
+            btn.textContent = 'Verifying...';
+
+            try {
+                const resp = await fetch('/api/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code })
+                });
+                const data = await resp.json();
+                if (data.ok) {
+                    window.location.href = '/generate';
+                } else {
+                    verrEl.textContent = data.error || 'Invalid code.';
+                    verrEl.style.display = 'block';
+                }
+            } catch (e) {
+                verrEl.textContent = 'Network error. Please try again.';
+                verrEl.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Verify';
+            }
+        }
+
+        async function resendCode() {
+            const verrEl = document.getElementById('verifyError');
+            const link = document.querySelector('.resend-link');
+            link.style.pointerEvents = 'none';
+            link.style.opacity = '0.5';
+            try {
+                const resp = await fetch('/api/resend-code', { method: 'POST' });
+                const data = await resp.json();
+                if (data.ok) {
+                    document.getElementById('verifyCode').value = '';
+                    verrEl.style.display = 'none';
+                    // brief success feedback
+                    link.textContent = 'Code sent!';
+                    link.style.color = '#10b981';
+                    setTimeout(() => {
+                        link.textContent = 'Resend code';
+                        link.style.color = '';
+                        link.style.pointerEvents = '';
+                        link.style.opacity = '';
+                    }, 2000);
+                } else {
+                    verrEl.textContent = data.error || 'Failed.';
+                    verrEl.style.display = 'block';
+                    link.style.pointerEvents = '';
+                    link.style.opacity = '';
+                }
+            } catch (e) {
+                verrEl.textContent = 'Network error.';
+                verrEl.style.display = 'block';
+                link.style.pointerEvents = '';
+                link.style.opacity = '';
+            }
+        }
+    </script>
+</body>
+</html>

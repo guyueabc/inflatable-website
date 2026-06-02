@@ -1,0 +1,1012 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>InflatableModel &mdash; 管理后台</title>
+  <style>
+
+        :root { --bg: #0f172a; --surface: #1e293b; --border: #334155; --text: #f1f5f9; --text-secondary: #94a3b8; --primary: #6366f1; --primary-light: rgba(99,102,241,0.1); }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: "Inter", sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
+        .app-layout { display: flex; flex-direction: row; flex: 1; min-height: 0; }
+        .top-nav { display: flex; align-items: center; height: 48px; flex-shrink: 0; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 20px; }
+        .top-nav-brand { font-size: 1rem; font-weight: 800; color: var(--text); text-decoration: none; margin-right: 32px; }
+        .top-nav-brand span { color: var(--primary); }
+        .top-nav-tabs { display: flex; gap: 4px; }
+        .nav-tab { padding: 8px 20px; border: none; background: transparent; color: var(--text-secondary); border-radius: 6px; font-size: .85rem; font-weight: 500; cursor: pointer; font-family: inherit; }
+        .nav-tab:hover { background: var(--primary-light); color: var(--primary); }
+        .nav-tab.active { background: var(--primary); color: #fff; font-weight: 600; }
+        .top-nav-right { margin-left: auto; }
+        .top-nav-logout { padding: 6px 14px; border: 1px solid var(--border); background: transparent; color: var(--text-secondary); border-radius: 6px; font-size: .8rem; cursor: pointer; font-family: inherit; }
+        .top-nav-logout:hover { border-color: #ef4444; color: #ef4444; }
+    
+
+
+        .panel-left {
+            width: 280px; flex-shrink: 0;
+            border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; background: var(--surface);
+        }
+        .panel-left-header {
+            padding: 12px 16px; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .panel-left-header h2 {
+            font-size: .9375rem; font-weight: 600;
+        }
+        .btn-logout {
+            font-size: .75rem; padding: 4px 10px; border-radius: 6px;
+            border: 1px solid var(--border); background: transparent;
+            color: var(--text-secondary); cursor: pointer; font-family: inherit;
+            transition: all .15s;
+        }
+        .btn-logout:hover { border-color: #ef4444; color: #ef4444; }
+
+        .search-wrap {
+            padding: 10px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+        }
+        .search-wrap input {
+            width: 100%; padding: 7px 12px; border-radius: 8px;
+            border: 1px solid var(--border); background: var(--bg);
+            color: var(--text); font-size: .8125rem; font-family: inherit; outline: none;
+        }
+        .search-wrap input:focus { border-color: var(--primary); }
+
+        .customer-list {
+            flex: 1; overflow-y: auto;
+        }
+        .customer-list::-webkit-scrollbar { width: 5px; }
+        .customer-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        .customer-item {
+            padding: 12px 16px; border-bottom: 1px solid var(--border);
+            cursor: pointer; transition: background .12s;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .customer-item:hover { background: var(--primary-light); }
+        .customer-item.active { background: var(--primary-light); border-left: 3px solid var(--primary); }
+        .customer-avatar {
+            width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+            background: var(--primary); color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: .8125rem;
+        }
+        .customer-meta { flex: 1; min-width: 0; }
+        .customer-name {
+            font-size: .8125rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .customer-last {
+            font-size: .6875rem; color: var(--text-secondary);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .badge-unread {
+            background: var(--primary); color: #fff; border-radius: 999px;
+            padding: 1px 6px; font-size: .625rem; font-weight: 600; flex-shrink: 0;
+        }
+
+        /* ═══ CENTER PANEL: Chat ═══ */
+        .panel-center {
+            flex: 1; display: flex; flex-direction: column;
+            background: var(--bg); min-width: 0;
+        }
+        .panel-center-header {
+            padding: 12px 20px; border-bottom: 1px solid var(--border);
+            font-size: .9375rem; font-weight: 600; flex-shrink: 0;
+        }
+        .chat-messages {
+            flex: 1; overflow-y: auto; padding: 16px 20px;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .chat-messages::-webkit-scrollbar { width: 5px; }
+        .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        .msg-row { display: flex; gap: 8px; max-width: 75%; }
+        .msg-row.customer { align-self: flex-start; }
+        .msg-row.admin { align-self: flex-end; flex-direction: row-reverse; }
+        .msg-row.system { align-self: center; max-width: 90%; }
+        .msg-avatar-sm {
+            width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: .6875rem; font-weight: 700;
+        }
+        .msg-row.customer .msg-avatar-sm { background: var(--primary); color: #fff; }
+        .msg-row.admin .msg-avatar-sm { background: #475569; color: var(--text-secondary); }
+        .msg-bubble {
+            padding: 8px 14px; border-radius: 14px; font-size: .8125rem; line-height: 1.5;
+            word-wrap: break-word;
+        }
+        .msg-row.customer .msg-bubble {
+            background: var(--surface); color: var(--text);
+            border: 1px solid var(--border); border-bottom-left-radius: 4px;
+        }
+        .msg-row.admin .msg-bubble {
+            background: var(--primary); color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+        .msg-row.system .msg-bubble {
+            background: transparent; color: var(--text-secondary);
+            text-align: center; font-style: italic; font-size: .75rem;
+        }
+        .msg-bubble img { max-width: 200px; border-radius: 6px; margin-top: 6px; cursor: pointer; display: block; }
+        .msg-time { font-size: .6rem; opacity: 0.5; margin-top: 3px; }
+
+        .placeholder-center {
+            flex: 1; display: flex; align-items: center; justify-content: center;
+            color: var(--text-secondary); font-size: .875rem;
+        }
+
+        .reply-bar {
+            padding: 12px 20px; border-top: 1px solid var(--border);
+            flex-shrink: 0; display: flex; gap: 8px; align-items: flex-end;
+        }
+        .reply-bar textarea {
+            flex: 1; padding: 9px 14px; border-radius: 10px; resize: vertical;
+            min-height: 40px; max-height: 120px;
+            border: 1px solid var(--border); background: var(--surface);
+            color: var(--text); font-size: .8125rem; font-family: inherit; outline: none;
+        }
+        .reply-bar textarea:focus { border-color: var(--primary); }
+        .btn-icon-sm {
+            width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--border);
+            background: var(--surface); color: var(--text-secondary);
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; transition: all .15s;
+        }
+        .btn-icon-sm:hover { border-color: var(--primary); color: var(--primary); }
+        .btn-send-sm {
+            background: var(--primary); color: #fff; border: none; border-radius: 8px;
+            padding: 0 18px; height: 40px; font-size: .8125rem; font-weight: 600;
+            cursor: pointer; font-family: inherit; flex-shrink: 0;
+        }
+        .btn-send-sm:hover { background: #4f46e5; }
+        .img-preview-row {
+            display: inline-block; position: relative; margin-bottom: 6px;
+        }
+        .img-preview-row img {
+            max-height: 60px; border-radius: 6px; border: 1px solid var(--border);
+        }
+        .remove-preview {
+            position: absolute; top: -5px; right: -5px;
+            width: 18px; height: 18px; border-radius: 50%;
+            background: #ef4444; color: #fff; border: none;
+            font-size: .625rem; cursor: pointer; line-height: 18px; text-align: center;
+        }
+
+        /* ═══ RIGHT PANEL: Customer Detail + Traffic ═══ */
+        .panel-right {
+            width: 360px; flex-shrink: 0;
+            border-left: 1px solid var(--border);
+            display: flex; flex-direction: column; background: var(--surface);
+            overflow-y: auto;
+        }
+        .panel-right::-webkit-scrollbar { width: 5px; }
+        .panel-right::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        .right-tabs {
+            display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0;
+        }
+        .right-tab {
+            flex: 1; padding: 10px 0; text-align: center;
+            font-size: .8125rem; font-weight: 500; cursor: pointer;
+            color: var(--text-secondary); border-bottom: 2px solid transparent;
+            transition: all .15s; background: none; border-top: none; border-left: none; border-right: none;
+            font-family: inherit;
+        }
+        .right-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+        .detail-section {
+            padding: 16px; display: none;
+        }
+        .detail-section.active { display: block; }
+
+        .detail-field {
+            margin-bottom: 14px;
+        }
+        .detail-field label {
+            font-size: .6875rem; font-weight: 600; color: var(--text-secondary);
+            text-transform: uppercase; letter-spacing: .5px; display: block; margin-bottom: 4px;
+        }
+        .detail-field .editable {
+            width: 100%; padding: 7px 10px; border-radius: 6px;
+            border: 1px solid transparent; background: var(--bg);
+            color: var(--text); font-size: .8125rem; font-family: inherit; outline: none;
+            transition: border-color .15s;
+        }
+        .detail-field .editable:focus {
+            border-color: var(--primary); background: var(--surface);
+        }
+        .detail-field .value { font-size: .8125rem; color: var(--text); word-break: break-all; }
+
+        .model-card {
+            background: var(--bg); border-radius: 8px; padding: 12px; margin-bottom: 10px;
+            border: 1px solid var(--border);
+        }
+        .model-card .model-name {
+            font-size: .8125rem; font-weight: 600; margin-bottom: 4px;
+        }
+        .model-card .model-time {
+            font-size: .6875rem; color: var(--text-secondary); margin-bottom: 8px;
+        }
+        .model-card a {
+            font-size: .75rem; color: var(--primary); text-decoration: none;
+        }
+        .model-card a:hover { text-decoration: underline; }
+
+        /* Traffic Charts */
+        .chart-container {
+            margin-bottom: 24px; background: var(--bg); border-radius: 8px;
+            padding: 14px; border: 1px solid var(--border);
+        }
+        .chart-container h4 {
+            font-size: .8125rem; font-weight: 600; margin-bottom: 10px;
+            color: var(--text-secondary); text-transform: uppercase; letter-spacing: .5px;
+        }
+        .chart-container canvas { max-height: 220px; }
+
+        .traffic-stats {
+            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px;
+        }
+        .traffic-stat {
+            background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+            padding: 12px; text-align: center;
+        }
+        .traffic-stat .num { font-size: 1.25rem; font-weight: 700; color: var(--primary); }
+        .traffic-stat .lbl { font-size: .625rem; color: var(--text-secondary); margin-top: 2px; text-transform: uppercase; }
+
+        @media (max-width: 1100px) {
+            .panel-right { width: 300px; }
+        }
+        @media (max-width: 860px) {
+            .app-layout { flex-direction: column; }
+            .panel-left { width: 100%; max-height: 200px; }
+            .panel-right { width: 100%; max-height: 300px; border-left: none; border-top: 1px solid var(--border); }
+        }
+
+    
+
+
+        .traffic-stats {
+            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px;
+        }
+        .traffic-stat {
+            background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+            padding: 12px; text-align: center;
+        }
+        .traffic-stat .num { font-size: 1.25rem; font-weight: 700; color: var(--primary); }
+        .traffic-stat .lbl { font-size: .625rem; color: var(--text-secondary); margin-top: 2px; text-transform: uppercase; }
+
+        @media (max-width: 1100px) {
+            .panel-right { width: 300px; }
+        }
+        @media (max-width: 860px) {
+            .app-layout { flex-direction: column; }
+            .panel-left { width: 100%; max-height: 200px; }
+            .panel-right { width: 100%; max-height: 300px; border-left: none; border-top: 1px solid var(--border); }
+        }
+        .traffic-stats {
+            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px;
+        }
+        .traffic-stat {
+            background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+            padding: 12px; text-align: center;
+        }
+        .traffic-stat .num { font-size: 1.25rem; font-weight: 700; color: var(--primary); }
+        .traffic-stat .lbl { font-size: .625rem; color: var(--text-secondary); margin-top: 2px; text-transform: uppercase; }
+
+        @media (max-width: 1100px) {
+            .panel-right { width: 300px; }
+        }
+        @media (max-width: 860px) {
+            .app-layout { flex-direction: column; }
+            .panel-left { width: 100%; max-height: 200px; }
+            .panel-right { width: 100%; max-height: 300px; border-left: none; border-top: 1px solid var(--border); }
+        }
+        .chart-container {
+            margin-bottom: 24px; background: var(--bg); border-radius: 8px;
+            padding: 14px; border: 1px solid var(--border);
+        }
+        .chart-container h4 {
+            font-size: .8125rem; font-weight: 600; margin-bottom: 10px;
+            color: var(--text-secondary); text-transform: uppercase; letter-spacing: .5px;
+        }
+        .chart-container canvas { max-height: 220px; }
+
+        .traffic-stats {
+            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px;
+        }
+        .traffic-stat {
+            background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+            padding: 12px; text-align: center;
+        }
+        .traffic-stat .num { font-size: 1.25rem; font-weight: 700; color: var(--primary); }
+        .traffic-stat .lbl { font-size: .625rem; color: var(--text-secondary); margin-top: 2px; text-transform: uppercase; }
+
+        @media (max-width: 1100px) {
+            .panel-right { width: 300px; }
+        }
+        @media (max-width: 860px) {
+            .app-layout { flex-direction: column; }
+            .panel-left { width: 100%; max-height: 200px; }
+            .panel-right { width: 100%; max-height: 300px; border-left: none; border-top: 1px solid var(--border); }
+        }
+    
+  </style>
+</head>
+<body style="display:flex;flex-direction:column;height:100vh;overflow:hidden;margin:0;padding:0;">
+
+  <!-- TOP NAV -->
+  <div class="top-nav" style="flex-shrink:0;">
+    <a href="/" class="top-nav-brand">Inflatable<span>Model</span></a>
+    <div class="top-nav-tabs">
+      <button class="nav-tab active" id="tabBtnChat" onclick="switchTab('chat')">聊天管理</button>
+      <button class="nav-tab" id="tabBtnTraffic" onclick="switchTab('traffic')">流量统计</button>
+    </div>
+    <div class="top-nav-right">
+      <button class="top-nav-logout" onclick="fetch('/api/admin/logout',{method:'POST'}).then(()=>location.reload())">退出</button>
+    </div>
+  </div>
+
+  <!-- TAB: CHAT -->
+  <div id="tabChat" style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;">
+<div class="app-layout">
+
+    <!-- ═══ LEFT ═══ -->
+    <div class="panel-left">
+        <div id="batchBar" style="display:none;padding:8px 12px;background:rgba(99,102,241,0.1);border-bottom:1px solid var(--border);align-items:center;gap:8px;font-size:.75rem;">
+            <span id="batchCount" style="color:var(--text-secondary);">已选 0 个</span>
+            <select id="batchTagSelect" style="padding:4px 6px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.75rem;">
+                <option value="">修改标签...</option>
+                <option value="D">D</option><option value="C">C</option><option value="B">B</option><option value="A">A</option>
+                <option value="S">S</option><option value="SS">SS</option><option value="SSS">SSS</option>
+            </select>
+            <button onclick="batchSetTag()" style="padding:4px 10px;border-radius:4px;border:none;background:var(--primary);color:#fff;cursor:pointer;">应用</button>
+            <button onclick="clearSelection()" style="padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);cursor:pointer;">取消</button>
+        </div>
+<div class="panel-left-header">
+            <h2>客户列表</h2>
+            <div style="display:flex;align-items:center;gap:8px;">
+                
+                
+            </div>
+        </div>
+        <div class="search-wrap">
+            <input type="text" id="customerSearch" placeholder="搜索客户..." oninput="renderCustomerList()">
+        
+        <div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;" id="tagFilterBar">
+            <button class="tag-filter-btn active" data-tag="" onclick="filterByTag(this, '')" style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--primary);color:#fff;font-size:.6875rem;cursor:pointer;">全部</button>
+            <button class="tag-filter-btn" data-tag="D" onclick="filterByTag(this, 'D')" style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:.6875rem;cursor:pointer;">D</button>
+            <button class="tag-filter-btn" data-tag="C" onclick="filterByTag(this, 'C')" style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:.6875rem;cursor:pointer;">C</button>
+            <button class="tag-filter-btn" data-tag="B" onclick="filterByTag(this, 'B')" style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:.6875rem;cursor:pointer;">B</button>
+            <button class="tag-filter-btn" data-tag="A" onclick="filterByTag(this, 'A')" style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:.6875rem;cursor:pointer;">A</button>
+            <button class="tag-filter-btn" data-tag="S" onclick="filterByTag(this, 'S')" style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:.6875rem;cursor:pointer;">S</button>
+            <button class="tag-filter-btn" data-tag="SS" onclick="filterByTag(this, 'SS')" style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:.6875rem;cursor:pointer;">SS</button>
+            <button class="tag-filter-btn" data-tag="SSS" onclick="filterByTag(this, 'SSS')" style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:.6875rem;cursor:pointer;">SSS</button>
+        </div></div>
+        <div class="customer-list" id="customerList"></div>
+    </div>
+
+    <!-- ═══ CENTER ═══ -->
+    <div class="panel-center" id="panelCenter">
+        <div class="panel-center-header" id="centerHeader">选择客户</div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="placeholder-center" id="placeholderCenter">选择客户查看聊天记录</div>
+        <div class="reply-bar" id="replyBar" style="display:none;">
+            <div id="adminImgPreview" style="display:none;margin-bottom:6px;" class="img-preview-row">
+                <img id="adminImgPreviewSrc" src="">
+                <button class="remove-preview" onclick="removeAdminImg()">&times;</button>
+            </div>
+            <input type="file" id="adminImageInput" accept="image/png,image/jpg,image/jpeg,image/gif,image/webp" hidden onchange="handleAdminImage(this)">
+            <button class="btn-icon-sm" onclick="document.getElementById('adminImageInput').click()" title="附件图片">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </button>
+            <textarea id="adminReplyInput" placeholder="输入回复..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAdminReply()}"></textarea>
+            <button class="btn-send-sm" onclick="sendAdminReply()">发送</button>
+        </div>
+    </div>
+
+    <!-- ═══ RIGHT ═══ -->
+    <div class="panel-right" id="panelRight">
+        
+
+        <!-- Detail Section -->
+        <div class="detail-section active" id="detailSection">
+            <div class="detail-field">
+                <label>姓名</label>
+                <div class="value" id="dName">—</div>
+            </div>
+            <div class="detail-field">
+                <label>邮箱</label>
+                <div class="value" id="dEmail">—</div>
+            </div>
+            <div class="detail-field">
+                <label>国家</label>
+                <input class="editable" id="dCountry" value="" onblur="saveField('country', this.value)" onkeydown="if(event.key==='Enter')this.blur()">
+            </div>
+            <div class="detail-field">
+                <label>WhatsApp</label>
+                <input class="editable" id="dWhatsapp" value="" onblur="saveField('whatsapp', this.value)" onkeydown="if(event.key==='Enter')this.blur()">
+            </div>
+            <div class="detail-field">
+                <label>标签</label>
+                <select id="dTag" onchange="saveField('tag', this.value)" style="width:100%;padding:7px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.8125rem;font-family:inherit;outline:none;">
+                    <option value="D">D</option><option value="C">C</option><option value="B">B</option><option value="A">A</option><option value="S">S</option><option value="SS">SS</option><option value="SSS">SSS</option>
+                </select>
+            </div>
+            <div class="detail-field"><button id="banBtn" onclick="toggleBan()" style="padding:6px 12px;border-radius:6px;border:1px solid #ef4444;background:transparent;color:#ef4444;font-size:.75rem;cursor:pointer;width:100%;">加入黑名单</button></div><div class="detail-field">
+                <label>电话</label>
+                <div class="value" id="dPhone">—</div>
+            </div>
+            <div class="detail-field">
+                <label>公司</label>
+                <div class="value" id="dCompany">—</div>
+            </div>
+            <div class="detail-field">
+                <label>生成状态</label>
+                <span id="dGenStatus" style="font-size:.75rem;"></span>
+            </div>
+            <hr style="border-color:var(--border);margin:14px 0;">
+            <h4 style="font-size:.75rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">3D 模型</h4>
+            <div id="modelList">&mdash;</div>
+            <hr style="border-color:var(--border);margin:14px 0;">
+            <h4 style="font-size:.75rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">快捷回复管理</h4>
+            <div id="qrList" style="margin-bottom:8px;"></div>
+            <div style="display:flex;gap:4px;">
+                <input id="qrInput" placeholder="新快捷回复…" style="flex:1;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.75rem;outline:none;">
+                <button onclick="addQuickReply()" style="padding:6px 12px;border-radius:6px;border:none;background:var(--primary);color:#fff;font-size:.75rem;cursor:pointer;">添加</button>
+            </div>
+        </div>
+</div>
+</div>
+
+  </div>
+
+  <!-- TAB: TRAFFIC -->
+  <div id="tabTraffic" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden;">
+    <div style="padding:20px;overflow-y:auto;flex:1;min-height:0;">
+
+<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+  <button class="period-btn" id="btnDay" onclick="switchPeriod('day')">日</button>
+  <button class="period-btn active" id="btnWeek" onclick="switchPeriod('week')">周</button>
+  <button class="period-btn" id="btnMonth" onclick="switchPeriod('month')">月</button>
+  <button class="period-btn" id="btnYear" onclick="switchPeriod('year')">年</button>
+</div>
+<div style="color:#94a3b8;font-size:.75rem;margin-bottom:12px;" id="dateRange"></div>
+<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+  <button onclick="exportTraffic()" style="padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--primary);font-size:.8rem;cursor:pointer;">导出 CSV</button>
+</div>
+<div style="color:#ef4444;font-size:.75rem;margin-bottom:8px;" id="statsError"></div>
+<div class="traffic-stats">
+  <div class="traffic-stat"><div class="num" id="tPV">0</div><div class="lbl">PV 浏览量</div></div>
+  <div class="traffic-stat"><div class="num" id="tUV">0</div><div class="lbl">UV 独立访客</div></div>
+  <div class="traffic-stat"><div class="num" id="tTotal">0</div><div class="lbl">累计PV</div></div>
+  <div class="traffic-stat"><div class="num" id="tWoW">0%</div><div class="lbl">环比</div></div>
+  <div class="traffic-stat"><div class="num" id="tYoY">0%</div><div class="lbl">同比</div></div>
+</div>
+<div class="chart-container">
+  <h4>近7天趋势 (PV)</h4>
+  <canvas id="chartLine"></canvas>
+</div>
+<div class="chart-container">
+  <h4>页面分布</h4>
+  <canvas id="chartPie"></canvas>
+</div>
+<div class="chart-container" id="monthlyChartWrap" style="display:none;">
+  <h4>月度趋势（柱状图）</h4>
+  <canvas id="chartMonthly"></canvas>
+</div>
+
+    </div>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script>
+let allCustomers = [];
+    let currentCustomerId = null;
+    let adminImagePath = '';
+
+    // ── Load customers ──
+    async function loadCustomers() {
+        try {
+            const res = await fetch('/api/admin/customers');
+            const data = await res.json();
+            if (data.ok) allCustomers = data.customers;
+            renderCustomerList();
+        } catch(e) {}
+    }
+
+    function renderCustomerList() {
+        const el = document.getElementById('customerList');
+        const q = (document.getElementById('customerSearch').value || '').toLowerCase();
+        const filtered = allCustomers.filter(c => {
+            if (!q) return true;
+            return (c.name || '').toLowerCase().includes(q) ||
+                   (c.email || '').toLowerCase().includes(q) ||
+                   (c.company || '').toLowerCase().includes(q);
+        });
+        el.innerHTML = filtered.map(c => `
+            <div class="customer-item ${c.id === currentCustomerId ? 'active' : ''}" onclick="selectCustomer('${escapeAttr(c.id)}')">
+                <div class="customer-avatar">${(c.name || '?')[0].toUpperCase()}</div>
+                <div class="customer-meta">
+                    <div class="customer-name">${escapeHtml(c.name)}${c.unread ? `<span class="badge-unread">${c.unread}</span>` : ''}</div>
+                    <div class="customer-last">${escapeHtml(c.email || '')}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // ── Select customer ──
+    function selectCustomer(cid) {
+        currentCustomerId = cid;
+        document.getElementById('centerHeader').textContent =
+            allCustomers.find(c => c.id === cid)?.name || '客户';
+        document.getElementById('replyBar').style.display = 'flex';
+        document.getElementById('placeholderCenter').style.display = 'none';
+        document.getElementById('chatMessages').style.display = 'flex';
+        loadCustomerDetail(cid);
+        loadMessages();
+        loadCustomerModels(cid);
+        renderCustomerList();
+    }
+
+    // ── Load customer detail ──
+    async function loadCustomerDetail(cid) {
+        try {
+            const res = await fetch('/api/admin/customer/' + cid);
+            const data = await res.json();
+            if (data.ok && data.customer) {
+                const c = data.customer;
+                document.getElementById('dName').textContent = c.name || '—';
+                document.getElementById('dEmail').textContent = c.email || '—';
+                document.getElementById('dCountry').value = c.country || '';
+                document.getElementById('dWhatsapp').value = c.whatsapp || '';
+                document.getElementById('dTag').value = c.tag || 'warm';
+                document.getElementById('dPhone').textContent = c.phone || '—';
+                document.getElementById('dCompany').textContent = c.company || '—';
+                const genHtml = c.generation_count
+                    ? '<span style="color:#10b981;">● 已完成</span>'
+                    : '<span style="color:#f59e0b;">● 未生成</span>';
+                document.getElementById('dGenStatus').innerHTML = genHtml;
+            }
+        } catch(e) {}
+    }
+
+    // ── Load customer models ──
+    async function loadCustomerModels(cid) {
+        try {
+            const res = await fetch('/api/admin/customer/models?customer_id=' + cid);
+            const data = await res.json();
+            const el = document.getElementById('modelList');
+            if (data.ok && data.models.length) {
+                el.innerHTML = data.models.map(m => `
+                    <div class="model-card">
+                        <div class="model-name">模型 ${m.task_id ? m.task_id.substring(0,8) : ''}...</div>
+                        <div class="model-time">${m.completed_at || ''}</div>
+                        <a href="/api/download-model?task_id=${escapeAttr(m.task_id)}&format=glb">下载 GLB</a>
+                    </div>
+                `).join('');
+            } else {
+                el.innerHTML = '<span style="color:var(--text-secondary);font-size:.75rem;">暂无模型。</span>';
+            }
+        } catch(e) {}
+    }
+
+    // ── Save editable field ──
+    async function saveField(field, value) {
+        if (!currentCustomerId) return;
+        try {
+            await fetch('/api/admin/customer/update', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ customer_id: currentCustomerId, field, value })
+            });
+        } catch(e) {}
+    }
+
+    // ── Load messages ──
+    async function loadMessages() {
+        if (!currentCustomerId) return;
+        try {
+            const res = await fetch('/api/admin/messages/' + currentCustomerId);
+            const data = await res.json();
+            if (!data.ok) return;
+            const el = document.getElementById('chatMessages');
+            const wasAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+            el.innerHTML = data.messages.map(m => {
+                const hasImg = m.image_path && m.image_path.trim();
+                const cls = m.sender === 'customer' ? 'customer' :
+                            m.sender === 'system' ? 'system' : 'admin';
+                const av = m.sender === 'customer' ? 'C' : 'A';
+                const cont = escapeHtml(m.content || '').replace(/\n/g,'<br>');
+                const imgH = hasImg ? `<img src="${escapeAttr(m.image_path)}" loading="lazy">` : '';
+                return `
+                    <div class="msg-row ${cls}">
+                        <div class="msg-avatar-sm">${av}</div>
+                        <div class="msg-bubble">
+                            <div>${cont}${imgH}</div>
+                            <div class="msg-time">${fmtTime(m.created_at)}</div>
+                        </div>
+                    </div>`;
+            }).join('');
+            if (wasAtBottom) el.scrollTop = el.scrollHeight;
+        } catch(e) {}
+    }
+
+    // ── Send admin reply ──
+    async function sendAdminReply() {
+        const input = document.getElementById('adminReplyInput');
+        const content = input.value.trim();
+        if (!currentCustomerId || (!content && !adminImagePath)) return;
+
+        const formData = new FormData();
+        formData.append('customer_id', currentCustomerId);
+        formData.append('content', content);
+        if (adminImagePath) {
+            // When we have freshly uploaded image via /api/upload-chat-image
+            formData.append('image_path', adminImagePath);
+        }
+
+        await fetch('/api/admin/reply', {
+            method: 'POST',
+            body: formData
+        });
+        input.value = '';
+        removeAdminImg();
+        loadMessages();
+        loadCustomers();
+    }
+
+    // ── Admin image handling ──
+    async function handleAdminImage(input) {
+        if (!input.files.length) return;
+        const file = input.files[0];
+        if (file.size > 10 * 1024 * 1024) { alert('Image too large. Max 10MB.'); input.value=''; return; }
+        const fd = new FormData(); fd.append('image', file);
+        try {
+            const res = await fetch('/api/upload-chat-image', {method:'POST', body:fd});
+            const data = await res.json();
+            if (data.ok) {
+                adminImagePath = data.image_path;
+                document.getElementById('adminImgPreviewSrc').src = data.url;
+                document.getElementById('adminImgPreview').style.display = 'inline-block';
+            }
+        } catch(e) {}
+        input.value = '';
+    }
+    function removeAdminImg() {
+        adminImagePath = '';
+        document.getElementById('adminImgPreview').style.display = 'none';
+    }
+
+    // ── Helpers ──
+    function fmtTime(ts) {
+        if (!ts) return '';
+        const d = new Date(ts + 'Z');
+        return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    }
+    function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
+    function escapeAttr(s) { return (s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+    // ── Polling ──
+    setInterval(() => {
+        loadCustomers();
+        if (currentCustomerId) loadMessages();
+    }, 4000);
+
+    loadCustomers();
+  </script>
+  <script>
+let chartLineInst = null, chartPieInst = null, chartMonthlyInst = null;
+    let currentPeriod = "week";
+
+    function switchPeriod(p) {
+        currentPeriod = p;
+        document.querySelectorAll(".period-btn").forEach(b => b.classList.remove("active"));
+        const map = {day:"btnDay", week:"btnWeek", month:"btnMonth", year:"btnYear"};
+        const el = document.getElementById(map[p]);
+        if (el) el.classList.add("active");
+        loadTraffic();
+    }
+
+    async function loadTraffic() {
+        try {
+            const res = await fetch("/api/admin/traffic/summary?period=" + currentPeriod);
+            const data = await res.json();
+            if (data.error && !data.ok) { document.getElementById("statsError").textContent = data.error; return; }
+            document.getElementById("statsError").textContent = "";
+
+            document.getElementById("tPV").textContent = data.pv || 0;
+            document.getElementById("tUV").textContent = data.uv || 0;
+            document.getElementById("tTotal").textContent = data.total_all || 0;
+            document.getElementById("dateRange").textContent = data.date_range || "";
+
+            const wow = data.pv_dod ?? data.pv_wow ?? data.pv_mom ?? data.pv_yoy ?? 0;
+            const yoy = data.pv_yoy ?? 0;
+            const wowEl = document.getElementById("tWoW");
+            const yoyEl = document.getElementById("tYoY");
+            wowEl.textContent = (wow > 0 ? "+" : "") + wow + "%";
+            wowEl.style.color = wow >= 0 ? "#10b981" : "#ef4444";
+            yoyEl.textContent = (yoy > 0 ? "+" : "") + yoy + "%";
+            yoyEl.style.color = yoy >= 0 ? "#10b981" : "#ef4444";
+
+            // Line chart
+            const daily = data.daily || [];
+            if (daily.length) {
+                const ctx = document.getElementById("chartLine").getContext("2d");
+                if (chartLineInst) chartLineInst.destroy();
+                chartLineInst = new Chart(ctx, {
+                    type: "line",
+                    data: {
+                        labels: daily.map(d => d.date.substring(5)),
+                        datasets: [{
+                            label: "PV", data: daily.map(d => d.pv),
+                            borderColor: "#6366f1", backgroundColor: "rgba(99,102,241,0.1)",
+                            fill: true, tension: 0.3, pointRadius: 3
+                        }, {
+                            label: "UV", data: daily.map(d => d.uv),
+                            borderColor: "#10b981", backgroundColor: "rgba(16,185,129,0.1)",
+                            fill: true, tension: 0.3, pointRadius: 3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { labels: { color: "#94a3b8", font: {size: 10} } } },
+                        scales: {
+                            x: { ticks: { color: "#94a3b8", font: {size: 10} }, grid: { color: "#334155" } },
+                            y: { ticks: { color: "#94a3b8", font: {size: 10} }, grid: { color: "#334155" }, beginAtZero: true }
+                        }
+                    }
+                });
+            }
+
+            const pages = data.page_distribution || [];
+            if (pages.length) {
+                const ctx2 = document.getElementById("chartPie").getContext("2d");
+                if (chartPieInst) chartPieInst.destroy();
+                const colors = ["#6366f1","#8b5cf6","#ec4899","#f43f5e","#f59e0b","#10b981","#06b6d4","#3b82f6","#14b8a6","#a855f7","#e11d48","#0284c7","#65a30d","#d97706"];
+                chartPieInst = new Chart(ctx2, {
+                    type: "doughnut",
+                    data: {
+                        labels: pages.map(p => p.page + " (" + p.count + ")"),
+                        datasets: [{ data: pages.map(p => p.count), backgroundColor: colors.slice(0, pages.length), borderColor: "#0f172a", borderWidth: 2 }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { position: "bottom", labels: { color: "#94a3b8", font: {size: 10}, padding: 10, boxWidth: 10 } } }
+                    }
+                });
+            }
+
+            const monthly = data.monthly || [];
+            const mw = document.getElementById("monthlyChartWrap");
+            if (monthly.length) {
+                mw.style.display = "block";
+                const ctx3 = document.getElementById("chartMonthly").getContext("2d");
+                if (chartMonthlyInst) chartMonthlyInst.destroy();
+                chartMonthlyInst = new Chart(ctx3, {
+                    type: "bar",
+                    data: {
+                        labels: monthly.map(m => m.ym),
+                        datasets: [{ label: "PV", data: monthly.map(m => m.pv), backgroundColor: "rgba(99,102,241,0.7)", borderColor: "#6366f1", borderWidth: 1 }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { labels: { color: "#94a3b8", font: {size: 10} } } },
+                        scales: {
+                            x: { ticks: { color: "#94a3b8", font: {size: 9} }, grid: { color: "#334155" } },
+                            y: { ticks: { color: "#94a3b8", font: {size: 10} }, grid: { color: "#334155" }, beginAtZero: true }
+                        }
+                    }
+                });
+            } else { mw.style.display = "none"; }
+        } catch(e) {
+            document.getElementById("statsError").textContent = "加载失败: " + e.message;
+        }
+    }
+  </script>
+  <script>
+function switchTab(tab) {
+  document.querySelectorAll(".nav-tab").forEach(function(b) { b.classList.remove("active"); });
+  var btnId = "tabBtn" + tab.charAt(0).toUpperCase() + tab.slice(1);
+  document.getElementById(btnId).classList.add("active");
+  document.getElementById("tabChat").style.display = tab === "chat" ? "flex" : "none";
+  document.getElementById("tabTraffic").style.display = tab === "traffic" ? "flex" : "none";
+  if (tab === "traffic" && typeof loadTraffic === "function") {
+    setTimeout(loadTraffic, 300);
+  }
+}
+  </script>
+<script>
+// Quick reply management
+async function loadQuickReplies() {
+    try {
+        const res = await fetch('/api/quick-replies');
+        const data = await res.json();
+        if (!data.ok) return;
+        const el = document.getElementById('qrList');
+        if (!el) return;
+        el.innerHTML = data.replies.map((r, i) => 
+            '<div style="display:flex;align-items:center;gap:4px;margin-bottom:4px;">' +
+            '<span style="flex:1;font-size:.75rem;color:var(--text);">' + escapeHtml(r) + '</span>' +
+            '<button onclick="deleteQuickReply(' + i + ')" style="padding:2px 6px;border-radius:4px;border:1px solid var(--border);background:transparent;color:#ef4444;font-size:.625rem;cursor:pointer;">\u5220\u9664</button></div>'
+        ).join('');
+    } catch(e) {}
+}
+
+async function addQuickReply() {
+    const input = document.getElementById('qrInput');
+    const content = input.value.trim();
+    if (!content) return;
+    const res = await fetch('/api/quick-replies', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({content}) });
+    const data = await res.json();
+    if (data.ok) { input.value = ''; loadQuickReplies(); loadAdminQuickReplies(); }
+}
+
+async function deleteQuickReply(index) {
+    if (!confirm('\u786e\u5b9a\u5220\u9664\u8be5\u5feb\u6377\u56de\u590d\uff1f')) return;
+    const res = await fetch('/api/quick-replies/' + index, { method:'DELETE' });
+    const data = await res.json();
+    if (data.ok) { loadQuickReplies(); loadAdminQuickReplies(); }
+}
+
+// Load quick replies for admin reply textarea hints
+async function loadAdminQuickReplies() {
+    try {
+        const res = await fetch('/api/quick-replies');
+        const data = await res.json();
+        if (!data.ok || !data.replies) return;
+        const replyArea = document.querySelector('.reply-bar textarea');
+        if (!replyArea) return;
+        // Remove old hint section
+        const oldHint = document.getElementById('qrHints');
+        if (oldHint) oldHint.remove();
+        const hintDiv = document.createElement('div');
+        hintDiv.id = 'qrHints';
+        hintDiv.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;padding:4px 8px;border-bottom:1px solid var(--border);';
+        data.replies.forEach(function(r) {
+            var btn = document.createElement('button');
+            btn.textContent = r;
+            btn.style.cssText = 'padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:.6875rem;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;';
+            btn.title = r;
+            btn.onclick = function() {
+                var ta = document.querySelector('.reply-bar textarea');
+                if (ta) { ta.value = r; ta.focus(); }
+            };
+            hintDiv.appendChild(btn);
+        });
+        var replyBar = document.querySelector('.reply-bar');
+        if (replyBar) replyBar.insertBefore(hintDiv, replyBar.firstChild);
+    } catch(e) {}
+}
+
+// Tag filter
+let currentTagFilter = '';
+
+function filterByTag(btn, tag) {
+    currentTagFilter = tag;
+    document.querySelectorAll('.tag-filter-btn').forEach(b => {
+        b.style.background = b === btn ? 'var(--primary)' : 'transparent';
+        b.style.color = b === btn ? '#fff' : 'var(--text-secondary)';
+    });
+    renderCustomerList();
+}
+
+// Override renderCustomerList to support tag filter
+const origRender = window.renderCustomerList;
+window.renderCustomerList = function() {
+    if (!window.allCustomers) { if (origRender) origRender(); return; }
+    const el = document.getElementById('customerList');
+    const q = (document.getElementById('customerSearch').value || '').toLowerCase();
+    let filtered = window.allCustomers.filter(c => {
+        if (currentTagFilter && c.tag !== currentTagFilter) return false;
+        if (!q) return true;
+        return (c.name || '').toLowerCase().includes(q) ||
+               (c.email || '').toLowerCase().includes(q) ||
+               (c.company || '').toLowerCase().includes(q);
+    });
+    el.innerHTML = filtered.map(c => {
+        const checked = (window.__selectedCustomers || []).includes(c.id) ? 'checked' : '';
+        return '<div class="customer-item ' + (c.id === window.currentCustomerId ? 'active' : '') + '">' +
+            '<input type="checkbox" class="cust-check" value="' + escapeAttr(c.id) + '" ' + checked + ' onchange="toggleSelect(this)" style="margin-right:6px;">' +
+            '<div style="flex:1;cursor:pointer;" onclick="window.selectCustomer('' + escapeAttr(c.id) + '')">' +
+            '<div class="customer-avatar">' + (c.name || '?')[0].toUpperCase() + '</div>' +
+            '<div class="customer-meta">' +
+            '<div class="customer-name">' + escapeHtml(c.name) + (c.unread ? '<span class="badge-unread">' + c.unread + '</span>' : '') + '</div>' +
+            '<div class="customer-last">' + escapeHtml(c.email || '') + '</div></div></div></div>';
+    }).join('');
+};
+
+// Batch operations
+let selectedCustomers = [];
+
+function toggleSelect(chk) {
+    if (chk.checked) {
+        if (!selectedCustomers.includes(chk.value)) selectedCustomers.push(chk.value);
+    } else {
+        selectedCustomers = selectedCustomers.filter(id => id !== chk.value);
+    }
+    updateBatchBar();
+}
+
+function updateBatchBar() {
+    const bar = document.getElementById('batchBar');
+    const count = document.getElementById('batchCount');
+    if (selectedCustomers.length > 0) {
+        bar.style.display = 'flex';
+        count.textContent = '\u5df2\u9009 ' + selectedCustomers.length + ' \u4e2a';
+    } else {
+        bar.style.display = 'none';
+    }
+}
+
+async function batchSetTag() {
+    const tag = document.getElementById('batchTagSelect').value;
+    if (!tag || !selectedCustomers.length) return;
+    if (!confirm('\u786e\u5b9a\u5c06 ' + selectedCustomers.length + ' \u4e2a\u5ba2\u6237\u7684\u6807\u7b7e\u4fee\u6539\u4e3a ' + tag + ' \u5417\uff1f')) return;
+    try {
+        for (const cid of selectedCustomers) {
+            await fetch('/api/admin/customer/update', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ customer_id: cid, field: 'tag', value: tag })
+            });
+        }
+        alert('\u4fee\u6539\u6210\u529f');
+        clearSelection();
+        if (window.loadCustomers) window.loadCustomers();
+    } catch(e) { alert('\u5931\u8d25: ' + e.message); }
+}
+
+function clearSelection() {
+    selectedCustomers = [];
+    document.querySelectorAll('.cust-check').forEach(chk => chk.checked = false);
+    updateBatchBar();
+}
+
+// Ban toggle
+async function toggleBan() {
+    if (!window.currentCustomerId) return;
+    const btn = document.getElementById('banBtn');
+    const isBanned = btn.textContent.includes('\u79fb\u51fa');
+    if (!isBanned && !confirm('\u786e\u5b9a\u5c06\u8be5\u5ba2\u6237\u52a0\u5165\u9ed1\u540d\u5355\uff1f')) return;
+    const newVal = isBanned ? 0 : 1;
+    try {
+        await fetch('/api/admin/customer/update', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ customer_id: window.currentCustomerId, field: 'banned', value: newVal })
+        });
+        btn.textContent = newVal ? '\u79fb\u51fa\u9ed1\u540d\u5355' : '\u52a0\u5165\u9ed1\u540d\u5355';
+        btn.style.borderColor = newVal ? '#10b981' : '#ef4444';
+        btn.style.color = newVal ? '#10b981' : '#ef4444';
+    } catch(e) { alert('\u5931\u8d25: ' + e.message); }
+}
+
+// Export traffic CSV
+async function exportTraffic() {
+    const period = window.currentPeriod || 'week';
+    window.open('/api/admin/traffic/export?period=' + period, '_blank');
+}
+
+// Escape helper (if not already defined)
+if (typeof escapeHtml === 'undefined') {
+    window.escapeHtml = function(s) { var d = document.createElement("div"); d.textContent = s||""; return d.innerHTML; };
+}
+if (typeof escapeAttr === 'undefined') {
+    window.escapeAttr = function(s) { return (s||"").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); };
+}
+
+// Init
+setTimeout(function() {
+    loadQuickReplies();
+    loadAdminQuickReplies();
+}, 1000);
+</script>
+</body>
+</html>
+
+
+
+

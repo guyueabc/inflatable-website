@@ -1,0 +1,14 @@
+HOW TO ADD YOUR PORTFOLIO IMAGES
+====================================================
+
+Put your photos in this folder with these names:
+
+  01.jpg → Porsche 911 — Guinness World Record (Dubai)
+  02.jpg → Giant Jellyfish Art Installation (Canada)
+  03.jpg → HELLO PANDAS Water Installation (Guangzhou)
+  04.jpg → "Dunbao" City Landmark (Nanchang)
+  05.jpg → Ocean of Colors Whale Parade (Qingdao)
+  06.jpg → B.Duck — World's Largest Duck (Shenzhen)
+
+FORMAT: JPG, PNG, or WebP (recommended 800x600 or larger)
+After adding images, refresh browser to see them.

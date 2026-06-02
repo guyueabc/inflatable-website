@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate 3D — InflatableModel.CN</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+        }
+    }
+    </script>
+    <style>
+        /* ── Model Result Panel ── */
+        .result-panel {
+            background: var(--surface, #1e293b);
+            border: 1px solid var(--border, #334155);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .result-header {
+            text-align: center;
+            padding: 28px 20px 16px;
+        }
+        .result-header h3 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+            background: linear-gradient(135deg, #6366f1, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .result-header p {
+            color: #94a3b8;
+            font-size: .875rem;
+        }
+        .result-grid {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 0;
+        }
+        @media (max-width: 800px) {
+            .result-grid { grid-template-columns: 1fr; }
+        }
+        .preview-panel {
+            border-right: 1px solid var(--border, #334155);
+            display: flex;
+            flex-direction: column;
+        }
+        .preview-header {
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border, #334155);
+            font-size: .875rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .format-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: rgba(99,102,241,0.1);
+            color: #6366f1;
+            font-size: .6875rem;
+            font-weight: 600;
+        }
+        #model-viewer {
+            width: 100%;
+            height: 420px;
+            background: #0a0f1a;
+            flex: 1;
+        }
+        .preview-footer {
+            padding: 8px 16px;
+            border-top: 1px solid var(--border, #334155);
+            font-size: .75rem;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+        }
+        .actions-panel {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .actions-panel h3 {
+            font-size: .9375rem;
+            font-weight: 600;
+        }
+        .actions-panel p {
+            color: #94a3b8;
+            font-size: .8125rem;
+            line-height: 1.5;
+        }
+        .download-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .btn-download {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: .8125rem;
+            text-decoration: none;
+            transition: all .15s;
+        }
+        .btn-dl-glb {
+            background: #6366f1;
+            color: #fff;
+        }
+        .btn-dl-glb:hover {
+            background: #4f46e5;
+            transform: translateY(-1px);
+        }
+        .btn-dl-obj {
+            background: transparent;
+            color: #94a3b8;
+            border: 1px solid #334155;
+        }
+        .btn-dl-obj:hover {
+            border-color: #6366f1;
+            color: #6366f1;
+        }
+        .btn-chat {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: .8125rem;
+            text-decoration: none;
+            background: #10b981;
+            color: #fff;
+            transition: all .15s;
+        }
+        .btn-chat:hover {
+            background: #059669;
+            transform: translateY(-1px);
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: .75rem;
+            padding: 6px 0;
+            border-bottom: 1px solid #334155;
+        }
+        .info-row .lbl {
+            color: #94a3b8;
+        }
+        .info-row .val {
+            color: #f1f5f9;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo">Inflatable<span>Model</span></a>
+            <div class="nav-links">
+                <a href="/generate" class="active">Generate 3D</a>
+                <a href="/messages">Messages</a>
+                <a href="#" onclick="fetch('/api/logout').then(()=>location.href='/')">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="page-section">
+        <div id="pageContainer" style="max-width:720px;margin:0 auto;">
+            <h2 class="section-title text-center">生成你的气模坊 3D 模型</h2>
+
+            <!-- Upload Zone -->
+            <div class="upload-zone" id="uploadZone">
+                <div class="upload-content">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--primary);margin-bottom:8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <p>拖拽图片到这里或<span class="browse-link">点击上传</span></p>
+                    <p class="hint">支持 JPG、PNG、WebP 格式（最大 32MB）</p>
+                </div>
+                <input type="file" id="fileInput" accept="image/*" hidden>
+            </div>
+
+            <!-- Image Preview -->
+            <div class="preview-container" id="previewContainer" style="display:none;">
+                <img id="previewImg" alt="Preview" style="max-width:100%;border-radius:8px;">
+                <button class="btn btn-secondary btn-sm" onclick="removeImage()" style="margin:8px;">删除</button>
+            </div>
+
+            <!-- Description -->
+            <div class="form-group" style="margin-top:20px;">
+                <label for="description">描述 <span class="optional">（可选）</span></label>
+                <textarea id="description" rows="3" placeholder="描述你想要的气模坊…"></textarea>
+            </div>
+
+            <button class="btn btn-primary btn-full btn-lg" id="generateBtn" onclick="submitGenerate()" style="margin-top:12px;">
+                生成 3D 模型
+            </button>
+
+            <!-- Status -->
+            <div class="status-card" id="generateStatus" style="display:none;">
+                <div class="spinner"></div>
+                <p id="statusText" style="color:var(--text-secondary);">提交中...</p>
+                <p class="timer" id="timer">00:00</p>
+                <p class="progress-label" id="progressLabel"></p>
+            </div>
+
+            <!-- Result -->
+            <div class="generate-result" id="generateResult" style="display:none;">
+                <div class="result-panel">
+                    <div class="result-header">
+                        <h3>Your 3D Model is Ready!</h3>
+                        <p>Preview, download, or discuss with our consultant.</p>
+                    </div>
+                    <div class="result-grid">
+                        <div class="preview-panel">
+                            <div class="preview-header">
+                                <span>3D Preview</span>
+                                <span class="format-badge">GLB</span>
+                            </div>
+                            <div id="model-viewer"></div>
+                            <div class="preview-footer">
+                                <span class="status-dot"></span>
+                                <span id="resultTime">Ready</span>
+                            </div>
+                        </div>
+                        <div class="actions-panel">
+                            <h3>Download Model</h3>
+                            <div class="download-group">
+                                <a id="btnDlGlb" href="#" class="btn-download btn-dl-glb">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    Download GLB
+                                </a>
+                                <a id="btnDlObj" href="#" class="btn-download btn-dl-obj">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    Download OBJ
+                                </a>
+                            </div>
+                            <h3>Next Steps</h3>
+                            <p>Your consultant <strong>Mia</strong> has reviewed your model and is waiting to discuss material options, pricing, and modifications.</p>
+                            <a id="chatMiaLink" href="/messages" class="btn-chat">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+                                Chat with Mia
+                            </a>
+                            <div class="info-row">
+                                <span class="lbl">Task ID</span>
+                                <span class="val" id="resultTaskId" style="font-size:.6875rem;word-break:break-all;">-</span>
+                            </div>
+                            <button class="btn btn-secondary btn-full" onclick="resetGenerate()" style="margin-top:8px;">Generate Another</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const previewContainer = document.getElementById('previewContainer');
+        const previewImg = document.getElementById('previewImg');
+        const generateStatus = document.getElementById('generateStatus');
+        const generateResult = document.getElementById('generateResult');
+        const generateBtn = document.getElementById('generateBtn');
+        const statusText = document.getElementById('statusText');
+        const timerEl = document.getElementById('timer');
+        const progressLabel = document.getElementById('progressLabel');
+
+        let selectedFile = null;
+        let elapsedSeconds = 0;
+        let timerInterval = null;
+        let pollInterval = null;
+
+        uploadZone.addEventListener('click', () => fileInput.click());
+        uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+        uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+        uploadZone.addEventListener('drop', e => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', () => { if (fileInput.files.length) handleFile(fileInput.files[0]); });
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) return;
+            selectedFile = file;
+            const reader = new FileReader();
+            reader.onload = e => {
+                previewImg.src = e.target.result;
+                previewContainer.style.display = 'block';
+                uploadZone.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeImage() {
+            selectedFile = null;
+            fileInput.value = '';
+            previewContainer.style.display = 'none';
+            uploadZone.style.display = 'flex';
+        }
+
+        function formatTime(sec) {
+            const m = String(Math.floor(sec / 60)).padStart(2, '0');
+            const s = String(sec % 60).padStart(2, '0');
+            return m + ':' + s;
+        }
+
+        function startTimer() {
+            elapsedSeconds = 0;
+            timerEl.textContent = '00:00';
+            timerInterval = setInterval(() => {
+                elapsedSeconds++;
+                timerEl.textContent = formatTime(elapsedSeconds);
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+            if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+        }
+
+        async function submitGenerate() {
+            const desc = document.getElementById('description').value.trim();
+            if (!selectedFile && !desc) {
+                alert('Please upload an image or provide a description.');
+                return;
+            }
+
+            generateBtn.disabled = true;
+            generateStatus.style.display = 'block';
+            generateResult.style.display = 'none';
+            statusText.textContent = 'Submitting...';
+            startTimer();
+
+            const formData = new FormData();
+            if (selectedFile) formData.append('image', selectedFile);
+            if (desc) formData.append('description', desc);
+
+            try {
+                const resp = await fetch('/api/generate-3d', { method: 'POST', body: formData });
+                const data = await resp.json();
+
+                if (!data.ok) {
+                    stopTimer();
+                    statusText.textContent = data.error || 'Generation failed.';
+                    if (data.redirect) {
+                        setTimeout(() => { window.location.href = data.redirect; }, 3000);
+                    }
+                    generateBtn.disabled = false;
+                    return;
+                }
+
+                statusText.textContent = 'Generating...';
+                progressLabel.textContent = 'Task ID: ' + data.task_id;
+                pollTask(data.task_id);
+
+            } catch (err) {
+                stopTimer();
+                statusText.textContent = 'Network error. Please try again.';
+                generateBtn.disabled = false;
+            }
+        }
+
+        async function pollTask(taskId) {
+            const pollStartTime = Date.now();
+            const MAX_POLL_DURATION = 5 * 60 * 1000;
+            pollInterval = setInterval(async () => {
+                if (Date.now() - pollStartTime > MAX_POLL_DURATION) {
+                    stopTimer();
+                    statusText.textContent = '生成超时，正在跳转到会话...';
+                    setTimeout(() => { window.location.href = '/messages'; }, 2000);
+                    return;
+                }
+                try {
+                    const resp = await fetch('/api/task-status/' + taskId);
+                    const data = await resp.json();
+
+                    if (data.status === 'done' || data.status === 'completed') {
+                        stopTimer();
+                        showResultPanel(taskId, data);
+                        return;
+
+                    } else if (data.status === 'fail' || data.status === 'failed') {
+                        stopTimer();
+                        statusText.textContent = 'Generation failed. Redirecting to messages...';
+                        setTimeout(() => { window.location.href = '/messages'; }, 3000);
+
+                    } else {
+                        if (data.progress >= 50) {
+                            progressLabel.textContent = 'Processing 3D model...';
+                        } else {
+                            progressLabel.textContent = 'Queued...';
+                        }
+                    }
+                } catch (err) {
+                    // keep polling on transient errors
+                }
+            }, 3000);
+        }
+
+        function showResultPanel(taskId, data) {
+            generateStatus.style.display = 'none';
+            generateResult.style.display = 'block';
+            document.getElementById('pageContainer').style.maxWidth = '1100px';
+            document.getElementById('resultTaskId').textContent = taskId;
+            document.getElementById('resultTime').textContent = 'Ready · ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+            document.getElementById('chatMiaLink').href = '/messages?task_id=' + taskId;
+
+            const glbUrl = data.model_urls?.glb || '';
+            const objUrl = data.model_urls?.obj || '';
+            const localModelUrl = data.local_model_url || '';
+            const btnGlb = document.getElementById('btnDlGlb');
+            const btnObj = document.getElementById('btnDlObj');
+
+            btnGlb.href = '/api/download-model?task_id=' + taskId + '&format=glb';
+            btnObj.href = '/api/download-model?task_id=' + taskId + '&format=obj';
+
+            // 3D preview: prefer locally cached model, fallback to proxy
+            const viewerEl = document.getElementById('model-viewer');
+            const modelUrl = localModelUrl || glbUrl || '';
+            if (modelUrl && (modelUrl.includes('.glb') || modelUrl.includes('/models/'))) {
+                const scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x0a0f1a);
+                const camera = new THREE.PerspectiveCamera(60, viewerEl.clientWidth / viewerEl.clientHeight, 0.1, 1000);
+                const renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                renderer.setSize(viewerEl.clientWidth, viewerEl.clientHeight);
+                viewerEl.innerHTML = '';
+                viewerEl.appendChild(renderer.domElement);
+
+                const controls = new THREE.OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.08;
+                camera.position.set(2, 2, 2);
+                controls.update();
+
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+                scene.add(ambientLight);
+                const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+                dirLight.position.set(5, 10, 7);
+                scene.add(dirLight);
+                const dirLight2 = new THREE.DirectionalLight(0x6366f1, 0.3);
+                dirLight2.position.set(-3, 2, -5);
+                scene.add(dirLight2);
+
+                const loader = new THREE.GLTFLoader();
+                loader.load(modelUrl, (gltf) => {
+                    scene.add(gltf.scene);
+                    const box = new THREE.Box3().setFromObject(gltf.scene);
+                    const center = box.getCenter(new THREE.Vector3());
+                    const size = box.getSize(new THREE.Vector3());
+                    const maxDim = Math.max(size.x, size.y, size.z);
+                    const fov = camera.fov * (Math.PI / 180);
+                    const cameraZ = Math.abs(maxDim / Math.tan(fov / 2));
+                    camera.position.copy(center);
+                    camera.position.z += cameraZ * 1.5;
+                    controls.target = center;
+                    controls.update();
+                }, undefined, () => {
+                    viewerEl.innerHTML = `
+                        <div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;text-align:center;">
+                            <div>
+                                <div style="font-size:3rem;margin-bottom:8px;">📦</div>
+                                <p style="font-size:.875rem;">Model preview unavailable.<br>Download the model using the buttons on the right.</p>
+                            </div>
+                        </div>`;
+                });
+
+                function animate() {
+                    requestAnimationFrame(animate);
+                    controls.update();
+                    renderer.render(scene, camera);
+                }
+                animate();
+
+                window.addEventListener('resize', () => {
+                    camera.aspect = viewerEl.clientWidth / viewerEl.clientHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(viewerEl.clientWidth, viewerEl.clientHeight);
+                });
+            } else {
+                viewerEl.innerHTML = `
+                    <div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;text-align:center;">
+                        <div>
+                            <div style="font-size:3rem;margin-bottom:8px;">🖼️</div>
+                            <p style="font-size:.875rem;">Preview image available in chat.<br>Download buttons on the right.</p>
+                        </div>
+                    </div>`;
+            }
+        }
+
+        function resetGenerate() {
+            generateResult.style.display = 'none';
+            generateStatus.style.display = 'none';
+            generateBtn.disabled = false;
+            document.getElementById('pageContainer').style.maxWidth = '720px';
+            removeImage();
+            document.getElementById('description').value = '';
+        }
+
+        // Auto-restore result panel when returning from messages with ?task_id=
+        (function() {
+            const params = new URLSearchParams(window.location.search);
+            const tid = params.get('task_id');
+            if (tid) {
+                if (window.history.replaceState) {
+                    window.history.replaceState({}, '', '/generate');
+                }
+                fetch('/api/task-status/' + tid)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.status === 'completed' && data.model_urls) {
+                            showResultPanel(tid, data);
+                        }
+                    })
+                    .catch(() => {});
+            }
+        })();
+    </script>
+</body>
+</html>

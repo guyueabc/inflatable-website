@@ -1,0 +1,22 @@
+====================================================
+  HOW TO ADD YOUR PORTFOLIO IMAGES
+====================================================
+
+Just put your photos in this folder with these exact names:
+
+  01.jpg  →  Giant Inflatable Mascot
+  02.jpg  →  Event Archway
+  03.jpg  →  Product Replica
+  04.jpg  →  Custom Character
+  05.jpg  →  Trade Show Display
+  06.jpg  →  Holiday Decoration
+
+FORMAT: JPG, PNG, or WebP
+SIZE:   Recommended 800x600 pixels or larger
+        Any aspect ratio works — images will crop to fit
+
+RENAMING: Right-click each image → Rename → type "01.jpg", "02.jpg", etc.
+
+If you want different descriptions, tell me and I'll update them for you.
+
+After adding images, refresh the browser (F5) to see them on the page.

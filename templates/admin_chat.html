@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聊天管理 — InflatableModel.CN</title>
+    
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --border: #334155;
+            --text: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --primary: #6366f1;
+            --primary-light: rgba(99,102,241,0.1);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg); color: var(--text);
+            height: 100vh; overflow: hidden;
+        }
+        .app-layout {
+            display: flex; height: 100vh;
+        }
+
+        /* ═══ LEFT PANEL: Customer List ═══ */
+        .panel-left {
+            width: 280px; flex-shrink: 0;
+            border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; background: var(--surface);
+        }
+        .panel-left-header {
+            padding: 12px 16px; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .panel-left-header h2 {
+            font-size: .9375rem; font-weight: 600;
+        }
+        .btn-logout {
+            font-size: .75rem; padding: 4px 10px; border-radius: 6px;
+            border: 1px solid var(--border); background: transparent;
+            color: var(--text-secondary); cursor: pointer; font-family: inherit;
+            transition: all .15s;
+        }
+        .btn-logout:hover { border-color: #ef4444; color: #ef4444; }
+
+        .search-wrap {
+            padding: 10px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+        }
+        .search-wrap input {
+            width: 100%; padding: 7px 12px; border-radius: 8px;
+            border: 1px solid var(--border); background: var(--bg);
+            color: var(--text); font-size: .8125rem; font-family: inherit; outline: none;
+        }
+        .search-wrap input:focus { border-color: var(--primary); }
+
+        .customer-list {
+            flex: 1; overflow-y: auto;
+        }
+        .customer-list::-webkit-scrollbar { width: 5px; }
+        .customer-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        .customer-item {
+            padding: 12px 16px; border-bottom: 1px solid var(--border);
+            cursor: pointer; transition: background .12s;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .customer-item:hover { background: var(--primary-light); }
+        .customer-item.active { background: var(--primary-light); border-left: 3px solid var(--primary); }
+        .customer-avatar {
+            width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+            background: var(--primary); color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: .8125rem;
+        }
+        .customer-meta { flex: 1; min-width: 0; }
+        .customer-name {
+            font-size: .8125rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .customer-last {
+            font-size: .6875rem; color: var(--text-secondary);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .badge-unread {
+            background: var(--primary); color: #fff; border-radius: 999px;
+            padding: 1px 6px; font-size: .625rem; font-weight: 600; flex-shrink: 0;
+        }
+
+        /* ═══ CENTER PANEL: Chat ═══ */
+        .panel-center {
+            flex: 1; display: flex; flex-direction: column;
+            background: var(--bg); min-width: 0;
+        }
+        .panel-center-header {
+            padding: 12px 20px; border-bottom: 1px solid var(--border);
+            font-size: .9375rem; font-weight: 600; flex-shrink: 0;
+        }
+        .chat-messages {
+            flex: 1; overflow-y: auto; padding: 16px 20px;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .chat-messages::-webkit-scrollbar { width: 5px; }
+        .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        .msg-row { display: flex; gap: 8px; max-width: 75%; }
+        .msg-row.customer { align-self: flex-start; }
+        .msg-row.admin { align-self: flex-end; flex-direction: row-reverse; }
+        .msg-row.system { align-self: center; max-width: 90%; }
+        .msg-avatar-sm {
+            width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: .6875rem; font-weight: 700;
+        }
+        .msg-row.customer .msg-avatar-sm { background: var(--primary); color: #fff; }
+        .msg-row.admin .msg-avatar-sm { background: #475569; color: var(--text-secondary); }
+        .msg-bubble {
+            padding: 8px 14px; border-radius: 14px; font-size: .8125rem; line-height: 1.5;
+            word-wrap: break-word;
+        }
+        .msg-row.customer .msg-bubble {
+            background: var(--surface); color: var(--text);
+            border: 1px solid var(--border); border-bottom-left-radius: 4px;
+        }
+        .msg-row.admin .msg-bubble {
+            background: var(--primary); color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+        .msg-row.system .msg-bubble {
+            background: transparent; color: var(--text-secondary);
+            text-align: center; font-style: italic; font-size: .75rem;
+        }
+        .msg-bubble img { max-width: 200px; border-radius: 6px; margin-top: 6px; cursor: pointer; display: block; }
+        .msg-time { font-size: .6rem; opacity: 0.5; margin-top: 3px; }
+
+        .placeholder-center {
+            flex: 1; display: flex; align-items: center; justify-content: center;
+            color: var(--text-secondary); font-size: .875rem;
+        }
+
+        .reply-bar {
+            padding: 12px 20px; border-top: 1px solid var(--border);
+            flex-shrink: 0; display: flex; gap: 8px; align-items: flex-end;
+        }
+        .reply-bar textarea {
+            flex: 1; padding: 9px 14px; border-radius: 10px; resize: vertical;
+            min-height: 40px; max-height: 120px;
+            border: 1px solid var(--border); background: var(--surface);
+            color: var(--text); font-size: .8125rem; font-family: inherit; outline: none;
+        }
+        .reply-bar textarea:focus { border-color: var(--primary); }
+        .btn-icon-sm {
+            width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--border);
+            background: var(--surface); color: var(--text-secondary);
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; transition: all .15s;
+        }
+        .btn-icon-sm:hover { border-color: var(--primary); color: var(--primary); }
+        .btn-send-sm {
+            background: var(--primary); color: #fff; border: none; border-radius: 8px;
+            padding: 0 18px; height: 40px; font-size: .8125rem; font-weight: 600;
+            cursor: pointer; font-family: inherit; flex-shrink: 0;
+        }
+        .btn-send-sm:hover { background: #4f46e5; }
+        .img-preview-row {
+            display: inline-block; position: relative; margin-bottom: 6px;
+        }
+        .img-preview-row img {
+            max-height: 60px; border-radius: 6px; border: 1px solid var(--border);
+        }
+        .remove-preview {
+            position: absolute; top: -5px; right: -5px;
+            width: 18px; height: 18px; border-radius: 50%;
+            background: #ef4444; color: #fff; border: none;
+            font-size: .625rem; cursor: pointer; line-height: 18px; text-align: center;
+        }
+
+        /* ═══ RIGHT PANEL: Customer Detail + Traffic ═══ */
+        .panel-right {
+            width: 360px; flex-shrink: 0;
+            border-left: 1px solid var(--border);
+            display: flex; flex-direction: column; background: var(--surface);
+            overflow-y: auto;
+        }
+        .panel-right::-webkit-scrollbar { width: 5px; }
+        .panel-right::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        .right-tabs {
+            display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0;
+        }
+        .right-tab {
+            flex: 1; padding: 10px 0; text-align: center;
+            font-size: .8125rem; font-weight: 500; cursor: pointer;
+            color: var(--text-secondary); border-bottom: 2px solid transparent;
+            transition: all .15s; background: none; border-top: none; border-left: none; border-right: none;
+            font-family: inherit;
+        }
+        .right-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+        .detail-section {
+            padding: 16px; display: none;
+        }
+        .detail-section.active { display: block; }
+
+        .detail-field {
+            margin-bottom: 14px;
+        }
+        .detail-field label {
+            font-size: .6875rem; font-weight: 600; color: var(--text-secondary);
+            text-transform: uppercase; letter-spacing: .5px; display: block; margin-bottom: 4px;
+        }
+        .detail-field .editable {
+            width: 100%; padding: 7px 10px; border-radius: 6px;
+            border: 1px solid transparent; background: var(--bg);
+            color: var(--text); font-size: .8125rem; font-family: inherit; outline: none;
+            transition: border-color .15s;
+        }
+        .detail-field .editable:focus {
+            border-color: var(--primary); background: var(--surface);
+        }
+        .detail-field .value { font-size: .8125rem; color: var(--text); word-break: break-all; }
+
+        .model-card {
+            background: var(--bg); border-radius: 8px; padding: 12px; margin-bottom: 10px;
+            border: 1px solid var(--border);
+        }
+        .model-card .model-name {
+            font-size: .8125rem; font-weight: 600; margin-bottom: 4px;
+        }
+        .model-card .model-time {
+            font-size: .6875rem; color: var(--text-secondary); margin-bottom: 8px;
+        }
+        .model-card a {
+            font-size: .75rem; color: var(--primary); text-decoration: none;
+        }
+        .model-card a:hover { text-decoration: underline; }
+
+        /* Traffic Charts */
+        .chart-container {
+            margin-bottom: 24px; background: var(--bg); border-radius: 8px;
+            padding: 14px; border: 1px solid var(--border);
+        }
+        .chart-container h4 {
+            font-size: .8125rem; font-weight: 600; margin-bottom: 10px;
+            color: var(--text-secondary); text-transform: uppercase; letter-spacing: .5px;
+        }
+        .chart-container canvas { max-height: 220px; }
+
+        .traffic-stats {
+            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px;
+        }
+        .traffic-stat {
+            background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+            padding: 12px; text-align: center;
+        }
+        .traffic-stat .num { font-size: 1.25rem; font-weight: 700; color: var(--primary); }
+        .traffic-stat .lbl { font-size: .625rem; color: var(--text-secondary); margin-top: 2px; text-transform: uppercase; }
+
+        @media (max-width: 1100px) {
+            .panel-right { width: 300px; }
+        }
+        @media (max-width: 860px) {
+            .app-layout { flex-direction: column; }
+            .panel-left { width: 100%; max-height: 200px; }
+            .panel-right { width: 100%; max-height: 300px; border-left: none; border-top: 1px solid var(--border); }
+        }
+    </style>
+</head>
+<body>
+<div class="app-layout">
+
+    <!-- ═══ LEFT ═══ -->
+    <div class="panel-left">
+        <div class="panel-left-header">
+            <h2>客户列表</h2>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <a href="/admin/traffic" style="font-size:.75rem;color:#6366f1;text-decoration:none;font-weight:500;">流量统计 →</a>
+                <button class="btn-logout" onclick="fetch('/api/admin/logout',{method:'POST'}).then(()=>location.reload())">退出</button>
+            </div>
+        </div>
+        <div class="search-wrap">
+            <input type="text" id="customerSearch" placeholder="Search customers..." oninput="renderCustomerList()">
+        </div>
+        <div class="customer-list" id="customerList"></div>
+    </div>
+
+    <!-- ═══ CENTER ═══ -->
+    <div class="panel-center" id="panelCenter">
+        <div class="panel-center-header" id="centerHeader">Select a customer</div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="placeholder-center" id="placeholderCenter">Select a customer to view conversation</div>
+        <div class="reply-bar" id="replyBar" style="display:none;">
+            <div id="adminImgPreview" style="display:none;margin-bottom:6px;" class="img-preview-row">
+                <img id="adminImgPreviewSrc" src="">
+                <button class="remove-preview" onclick="removeAdminImg()">&times;</button>
+            </div>
+            <input type="file" id="adminImageInput" accept="image/png,image/jpg,image/jpeg,image/gif,image/webp" hidden onchange="handleAdminImage(this)">
+            <button class="btn-icon-sm" onclick="document.getElementById('adminImageInput').click()" title="Attach image">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </button>
+            <textarea id="adminReplyInput" placeholder="Type reply..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAdminReply()}"></textarea>
+            <button class="btn-send-sm" onclick="sendAdminReply()">Send</button>
+        </div>
+    </div>
+
+    <!-- ═══ RIGHT ═══ -->
+    <div class="panel-right" id="panelRight">
+        <div class="right-tabs">
+            
+            
+        </div>
+
+        <!-- Detail Section -->
+        <div class="detail-section active" id="detailSection">
+            <div class="detail-field">
+                <label>Name</label>
+                <div class="value" id="dName">—</div>
+            </div>
+            <div class="detail-field">
+                <label>Email</label>
+                <div class="value" id="dEmail">—</div>
+            </div>
+            <div class="detail-field">
+                <label>Country</label>
+                <input class="editable" id="dCountry" value="" onblur="saveField('country', this.value)" onkeydown="if(event.key==='Enter')this.blur()">
+            </div>
+            <div class="detail-field">
+                <label>WhatsApp</label>
+                <input class="editable" id="dWhatsapp" value="" onblur="saveField('whatsapp', this.value)" onkeydown="if(event.key==='Enter')this.blur()">
+            </div>
+            <div class="detail-field">
+                <label>Tag</label>
+                <select id="dTag" onchange="saveField('tag', this.value)" style="width:100%;padding:7px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.8125rem;font-family:inherit;outline:none;">
+                    <option value="hot">Hot</option><option value="warm">Warm</option><option value="cold">Cold</option><option value="closed">Closed</option>
+                </select>
+            </div>
+            <div class="detail-field">
+                <label>Phone</label>
+                <div class="value" id="dPhone">—</div>
+            </div>
+            <div class="detail-field">
+                <label>Company</label>
+                <div class="value" id="dCompany">—</div>
+            </div>
+            <div class="detail-field">
+                <label>Generation</label>
+                <span id="dGenStatus" style="font-size:.75rem;"></span>
+            </div>
+            <hr style="border-color:var(--border);margin:14px 0;">
+            <h4 style="font-size:.75rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">3D Models</h4>
+            <div id="modelList">—</div>
+        </div>
+
+        <script>
+    let allCustomers = [];
+    let currentCustomerId = null;
+    let adminImagePath = '';
+
+    // ── Load customers ──
+    async function loadCustomers() {
+        try {
+            const res = await fetch('/api/admin/customers');
+            const data = await res.json();
+            if (data.ok) allCustomers = data.customers;
+            renderCustomerList();
+        } catch(e) {}
+    }
+
+    function renderCustomerList() {
+        const el = document.getElementById('customerList');
+        const q = (document.getElementById('customerSearch').value || '').toLowerCase();
+        const filtered = allCustomers.filter(c => {
+            if (!q) return true;
+            return (c.name || '').toLowerCase().includes(q) ||
+                   (c.email || '').toLowerCase().includes(q) ||
+                   (c.company || '').toLowerCase().includes(q);
+        });
+        el.innerHTML = filtered.map(c => `
+            <div class="customer-item ${c.id === currentCustomerId ? 'active' : ''}" onclick="selectCustomer('${escapeAttr(c.id)}')">
+                <div class="customer-avatar">${(c.name || '?')[0].toUpperCase()}</div>
+                <div class="customer-meta">
+                    <div class="customer-name">${escapeHtml(c.name)}${c.unread ? `<span class="badge-unread">${c.unread}</span>` : ''}</div>
+                    <div class="customer-last">${escapeHtml(c.email || '')}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // ── Select customer ──
+    function selectCustomer(cid) {
+        currentCustomerId = cid;
+        document.getElementById('centerHeader').textContent =
+            allCustomers.find(c => c.id === cid)?.name || 'Customer';
+        document.getElementById('replyBar').style.display = 'flex';
+        document.getElementById('placeholderCenter').style.display = 'none';
+        document.getElementById('chatMessages').style.display = 'flex';
+        loadCustomerDetail(cid);
+        loadMessages();
+        loadCustomerModels(cid);
+        renderCustomerList();
+    }
+
+    // ── Load customer detail ──
+    async function loadCustomerDetail(cid) {
+        try {
+            const res = await fetch('/api/admin/customer/' + cid);
+            const data = await res.json();
+            if (data.ok && data.customer) {
+                const c = data.customer;
+                document.getElementById('dName').textContent = c.name || '—';
+                document.getElementById('dEmail').textContent = c.email || '—';
+                document.getElementById('dCountry').value = c.country || '';
+                document.getElementById('dWhatsapp').value = c.whatsapp || '';
+                document.getElementById('dTag').value = c.tag || 'warm';
+                document.getElementById('dPhone').textContent = c.phone || '—';
+                document.getElementById('dCompany').textContent = c.company || '—';
+                const genHtml = c.generation_count
+                    ? '<span style="color:#10b981;">● Completed</span>'
+                    : '<span style="color:#f59e0b;">● No generation</span>';
+                document.getElementById('dGenStatus').innerHTML = genHtml;
+            }
+        } catch(e) {}
+    }
+
+    // ── Load customer models ──
+    async function loadCustomerModels(cid) {
+        try {
+            const res = await fetch('/api/admin/customer/models?customer_id=' + cid);
+            const data = await res.json();
+            const el = document.getElementById('modelList');
+            if (data.ok && data.models.length) {
+                el.innerHTML = data.models.map(m => `
+                    <div class="model-card">
+                        <div class="model-name">Model ${m.task_id ? m.task_id.substring(0,8) : ''}...</div>
+                        <div class="model-time">${m.completed_at || ''}</div>
+                        <a href="/api/download-model?task_id=${escapeAttr(m.task_id)}&format=glb">Download GLB</a>
+                    </div>
+                `).join('');
+            } else {
+                el.innerHTML = '<span style="color:var(--text-secondary);font-size:.75rem;">No models yet.</span>';
+            }
+        } catch(e) {}
+    }
+
+    // ── Save editable field ──
+    async function saveField(field, value) {
+        if (!currentCustomerId) return;
+        try {
+            await fetch('/api/admin/customer/update', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ customer_id: currentCustomerId, field, value })
+            });
+        } catch(e) {}
+    }
+
+    // ── Load messages ──
+    async function loadMessages() {
+        if (!currentCustomerId) return;
+        try {
+            const res = await fetch('/api/admin/messages/' + currentCustomerId);
+            const data = await res.json();
+            if (!data.ok) return;
+            const el = document.getElementById('chatMessages');
+            const wasAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+            el.innerHTML = data.messages.map(m => {
+                const hasImg = m.image_path && m.image_path.trim();
+                const cls = m.sender === 'customer' ? 'customer' :
+                            m.sender === 'system' ? 'system' : 'admin';
+                const av = m.sender === 'customer' ? 'C' : 'A';
+                const cont = escapeHtml(m.content || '').replace(/\n/g,'<br>');
+                const imgH = hasImg ? `<img src="${escapeAttr(m.image_path)}" loading="lazy">` : '';
+                return `
+                    <div class="msg-row ${cls}">
+                        <div class="msg-avatar-sm">${av}</div>
+                        <div class="msg-bubble">
+                            <div>${cont}${imgH}</div>
+                            <div class="msg-time">${fmtTime(m.created_at)}</div>
+                        </div>
+                    </div>`;
+            }).join('');
+            if (wasAtBottom) el.scrollTop = el.scrollHeight;
+        } catch(e) {}
+    }
+
+    // ── Send admin reply ──
+    async function sendAdminReply() {
+        const input = document.getElementById('adminReplyInput');
+        const content = input.value.trim();
+        if (!currentCustomerId || (!content && !adminImagePath)) return;
+
+        const formData = new FormData();
+        formData.append('customer_id', currentCustomerId);
+        formData.append('content', content);
+        if (adminImagePath) {
+            // When we have freshly uploaded image via /api/upload-chat-image
+            formData.append('image_path', adminImagePath);
+        }
+
+        await fetch('/api/admin/reply', {
+            method: 'POST',
+            body: formData
+        });
+        input.value = '';
+        removeAdminImg();
+        loadMessages();
+        loadCustomers();
+    }
+
+    // ── Admin image handling ──
+    async function handleAdminImage(input) {
+        if (!input.files.length) return;
+        const file = input.files[0];
+        if (file.size > 10 * 1024 * 1024) { alert('Image too large. Max 10MB.'); input.value=''; return; }
+        const fd = new FormData(); fd.append('image', file);
+        try {
+            const res = await fetch('/api/upload-chat-image', {method:'POST', body:fd});
+            const data = await res.json();
+            if (data.ok) {
+                adminImagePath = data.image_path;
+                document.getElementById('adminImgPreviewSrc').src = data.url;
+                document.getElementById('adminImgPreview').style.display = 'inline-block';
+            }
+        } catch(e) {}
+        input.value = '';
+    }
+    function removeAdminImg() {
+        adminImagePath = '';
+        document.getElementById('adminImgPreview').style.display = 'none';
+    }
+
+    // ── Helpers ──
+    function fmtTime(ts) {
+        if (!ts) return '';
+        const d = new Date(ts + 'Z');
+        return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    }
+    function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
+    function escapeAttr(s) { return (s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+    // ── Polling ──
+    setInterval(() => {
+        loadCustomers();
+        if (currentCustomerId) loadMessages();
+    }, 4000);
+
+    loadCustomers();
+</script>
+</body>
+</html>

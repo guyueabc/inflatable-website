@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login — InflatableModel.CN</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0f172a;
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; color: #e2e8f0;
+        }
+        .login-box {
+            background: #1e293b; border: 1px solid #334155;
+            border-radius: 12px; padding: 40px; width: 360px; max-width: 90vw;
+        }
+        h1 { font-size: 20px; margin-bottom: 8px; color: #f1f5f9; }
+        p { font-size: 13px; color: #94a3b8; margin-bottom: 24px; }
+        label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 6px; }
+        input {
+            width: 100%; padding: 10px 14px; border-radius: 8px;
+            border: 1px solid #334155; background: #0f172a; color: #e2e8f0;
+            font-size: 15px; outline: none; margin-bottom: 20px;
+        }
+        input:focus { border-color: #3b82f6; }
+        button {
+            width: 100%; padding: 12px; border-radius: 8px; border: none;
+            background: #3b82f6; color: #fff; font-size: 15px; font-weight: 600;
+            cursor: pointer; transition: background 0.2s;
+        }
+        button:hover { background: #2563eb; }
+        .error { color: #f87171; font-size: 13px; margin-bottom: 12px; display: none; }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h1>Admin Panel</h1>
+        <p>Sign in to manage customers and messages.</p>
+        <div class="error" id="error"></div>
+        <label>Password</label>
+        <input type="password" id="password" placeholder="Enter admin password" autofocus>
+        <button onclick="login()">Sign In</button>
+    </div>
+
+    <script>
+        async function login() {
+            const pw = document.getElementById('password').value;
+            const err = document.getElementById('error');
+            err.style.display = 'none';
+
+            const res = await fetch('/api/admin/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: pw })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                window.location.href = '/admin';
+            } else {
+                err.textContent = data.error || 'Login failed';
+                err.style.display = 'block';
+            }
+        }
+        document.getElementById('password').addEventListener('keydown', e => {
+            if (e.key === 'Enter') login();
+        });
+    </script>
+</body>
+</html>
