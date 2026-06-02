@@ -1,15 +1,17 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>InflatableModel &mdash; 管理后台</title>
-  <style>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 — InflatableModel.CN</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
         :root { --bg: #0f172a; --surface: #1e293b; --border: #334155; --text: #f1f5f9; --text-secondary: #94a3b8; --primary: #6366f1; --primary-light: rgba(99,102,241,0.1); }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: "Inter", sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
-        .app-layout { display: flex; flex-direction: row; flex: 1; min-height: 0; }
+        .app-layout { display: flex; flex-direction: column; height: 100vh; }
         .top-nav { display: flex; align-items: center; height: 48px; flex-shrink: 0; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 20px; }
         .top-nav-brand { font-size: 1rem; font-weight: 800; color: var(--text); text-decoration: none; margin-right: 32px; }
         .top-nav-brand span { color: var(--primary); }
@@ -20,9 +22,8 @@
         .top-nav-right { margin-left: auto; }
         .top-nav-logout { padding: 6px 14px; border: 1px solid var(--border); background: transparent; color: var(--text-secondary); border-radius: 6px; font-size: .8rem; cursor: pointer; font-family: inherit; }
         .top-nav-logout:hover { border-color: #ef4444; color: #ef4444; }
-    
-
-
+    </style>
+    <style>
         .panel-left {
             width: 280px; flex-shrink: 0;
             border-right: 1px solid var(--border);
@@ -264,9 +265,8 @@
             .panel-right { width: 100%; max-height: 300px; border-left: none; border-top: 1px solid var(--border); }
         }
 
-    
-
-
+    </style>
+    <style>
         .traffic-stats {
             display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px;
         }
@@ -331,84 +331,60 @@
             .panel-left { width: 100%; max-height: 200px; }
             .panel-right { width: 100%; max-height: 300px; border-left: none; border-top: 1px solid var(--border); }
         }
-    
-  </style>
+    </style>
 </head>
-<body style="display:flex;flex-direction:column;height:100vh;overflow:hidden;margin:0;padding:0;">
-
-  <!-- TOP NAV -->
-  <div class="top-nav" style="flex-shrink:0;">
-    <a href="/" class="top-nav-brand">Inflatable<span>Model</span></a>
-    <div class="top-nav-tabs">
-      <button class="nav-tab active" id="tabBtnChat" onclick="switchTab('chat')">聊天管理</button>
-      <button class="nav-tab" id="tabBtnTraffic" onclick="switchTab('traffic')">流量统计</button>
-    </div>
-    <div class="top-nav-right">
-      <button class="top-nav-logout" onclick="fetch('/api/admin/logout',{method:'POST'}).then(()=>location.reload())">退出</button>
-    </div>
-  </div>
-
-  <!-- TAB: CHAT -->
-  <div id="tabChat" style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;">
+<body>
 <div class="app-layout">
-
-    <!-- ═══ LEFT ═══ -->
-    <div class="panel-left">
-        <div id="batchBar" style="display:none;padding:8px 12px;background:rgba(99,102,241,0.1);border-bottom:1px solid var(--border);align-items:center;gap:8px;font-size:.75rem;">
-            <span id="batchCount" style="color:var(--text-secondary);">已选 0 个</span>
-            <select id="batchTagSelect" style="padding:4px 6px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.75rem;">
-                <option value="">修改标签...</option>
-                <option value="D">D</option><option value="C">C</option><option value="B">B</option><option value="A">A</option>
-                <option value="S">S</option><option value="SS">SS</option><option value="SSS">SSS</option>
-            </select>
-            <button onclick="batchSetTag()" style="padding:4px 10px;border-radius:4px;border:none;background:var(--primary);color:#fff;cursor:pointer;">应用</button>
-            <button onclick="clearSelection()" style="padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);cursor:pointer;">取消</button>
+    <div class="top-nav">
+        <a href="/" class="top-nav-brand">Inflatable<span>Model</span></a>
+        <div class="top-nav-tabs">
+            <button class="nav-tab active" id="tabBtnChat" onclick="switchTab('chat')">聊天管理</button>
+            <button class="nav-tab" id="tabBtnTraffic" onclick="switchTab('traffic')">流量统计</button>
         </div>
-<div class="panel-left-header">
+        <div class="top-nav-right">
+            <button class="top-nav-logout" onclick="fetch('/api/admin/logout',{method:'POST'}).then(()=>location.reload())">退出</button>
+        </div>
+    </div>
+    <div id="tabChat" style="display:flex;flex:1;overflow:hidden;">
+<div class="panel-left">
+        <div class="panel-left-header">
             <h2>客户列表</h2>
             <div style="display:flex;align-items:center;gap:8px;">
-                
-                
+                <a href="/admin/traffic" style="font-size:.75rem;color:#6366f1;text-decoration:none;font-weight:500;">流量统计 →</a>
+                <button class="btn-logout" onclick="fetch('/api/admin/logout',{method:'POST'}).then(()=>location.reload())">退出</button>
             </div>
         </div>
         <div class="search-wrap">
-            <input type="text" id="customerSearch" placeholder="搜索客户..." oninput="renderCustomerList()">
-        
-        <div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;" id="tagFilterBar">
-            <button class="tag-filter-btn active" data-tag="" onclick="filterByTag(this, '')" style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--primary);color:#fff;font-size:.6875rem;cursor:pointer;">全部</button>
-            <button class="tag-filter-btn" data-tag="D" onclick="filterByTag(this, 'D')" style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:.6875rem;cursor:pointer;">D</button>
-            <button class="tag-filter-btn" data-tag="C" onclick="filterByTag(this, 'C')" style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:.6875rem;cursor:pointer;">C</button>
-            <button class="tag-filter-btn" data-tag="B" onclick="filterByTag(this, 'B')" style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:.6875rem;cursor:pointer;">B</button>
-            <button class="tag-filter-btn" data-tag="A" onclick="filterByTag(this, 'A')" style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:.6875rem;cursor:pointer;">A</button>
-            <button class="tag-filter-btn" data-tag="S" onclick="filterByTag(this, 'S')" style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:.6875rem;cursor:pointer;">S</button>
-            <button class="tag-filter-btn" data-tag="SS" onclick="filterByTag(this, 'SS')" style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:.6875rem;cursor:pointer;">SS</button>
-            <button class="tag-filter-btn" data-tag="SSS" onclick="filterByTag(this, 'SSS')" style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:.6875rem;cursor:pointer;">SSS</button>
-        </div></div>
+            <input type="text" id="customerSearch" placeholder="Search customers..." oninput="renderCustomerList()">
+        </div>
         <div class="customer-list" id="customerList"></div>
     </div>
 
     <!-- ═══ CENTER ═══ -->
     <div class="panel-center" id="panelCenter">
-        <div class="panel-center-header" id="centerHeader">选择客户</div>
+        <div class="panel-center-header" id="centerHeader">Select a customer</div>
         <div class="chat-messages" id="chatMessages"></div>
-        <div class="placeholder-center" id="placeholderCenter">选择客户查看聊天记录</div>
+        <div class="placeholder-center" id="placeholderCenter">Select a customer to view conversation</div>
         <div class="reply-bar" id="replyBar" style="display:none;">
             <div id="adminImgPreview" style="display:none;margin-bottom:6px;" class="img-preview-row">
                 <img id="adminImgPreviewSrc" src="">
                 <button class="remove-preview" onclick="removeAdminImg()">&times;</button>
             </div>
             <input type="file" id="adminImageInput" accept="image/png,image/jpg,image/jpeg,image/gif,image/webp" hidden onchange="handleAdminImage(this)">
-            <button class="btn-icon-sm" onclick="document.getElementById('adminImageInput').click()" title="附件图片">
+            <button class="btn-icon-sm" onclick="document.getElementById('adminImageInput').click()" title="Attach image">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
             </button>
-            <textarea id="adminReplyInput" placeholder="输入回复..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAdminReply()}"></textarea>
+            <textarea id="adminReplyInput" placeholder="Type reply..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAdminReply()}"></textarea>
             <button class="btn-send-sm" onclick="sendAdminReply()">发送</button>
         </div>
     </div>
 
     <!-- ═══ RIGHT ═══ -->
     <div class="panel-right" id="panelRight">
-        
+        <div class="right-tabs">
+            
+            
+        </div>
 
         <!-- Detail Section -->
         <div class="detail-section active" id="detailSection">
@@ -431,10 +407,10 @@
             <div class="detail-field">
                 <label>标签</label>
                 <select id="dTag" onchange="saveField('tag', this.value)" style="width:100%;padding:7px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.8125rem;font-family:inherit;outline:none;">
-                    <option value="D">D</option><option value="C">C</option><option value="B">B</option><option value="A">A</option><option value="S">S</option><option value="SS">SS</option><option value="SSS">SSS</option>
+                    <option value="">--</option><option value="D">D</option><option value="C">C</option><option value="B">B</option><option value="A">A</option><option value="S">S</option><option value="SS">SS</option><option value="SSS">SSS</option>
                 </select>
             </div>
-            <div class="detail-field"><button id="banBtn" onclick="toggleBan()" style="padding:6px 12px;border-radius:6px;border:1px solid #ef4444;background:transparent;color:#ef4444;font-size:.75rem;cursor:pointer;width:100%;">加入黑名单</button></div><div class="detail-field">
+            <div class="detail-field">
                 <label>电话</label>
                 <div class="value" id="dPhone">—</div>
             </div>
@@ -443,67 +419,16 @@
                 <div class="value" id="dCompany">—</div>
             </div>
             <div class="detail-field">
-                <label>生成状态</label>
+                <label>Generation</label>
                 <span id="dGenStatus" style="font-size:.75rem;"></span>
             </div>
             <hr style="border-color:var(--border);margin:14px 0;">
-            <h4 style="font-size:.75rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">3D 模型</h4>
-            <div id="modelList">&mdash;</div>
-            <hr style="border-color:var(--border);margin:14px 0;">
-            <h4 style="font-size:.75rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">快捷回复管理</h4>
-            <div id="qrList" style="margin-bottom:8px;"></div>
-            <div style="display:flex;gap:4px;">
-                <input id="qrInput" placeholder="新快捷回复…" style="flex:1;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.75rem;outline:none;">
-                <button onclick="addQuickReply()" style="padding:6px 12px;border-radius:6px;border:none;background:var(--primary);color:#fff;font-size:.75rem;cursor:pointer;">添加</button>
-            </div>
+            <h4 style="font-size:.75rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">3D Models</h4>
+            <div id="modelList">—</div>
         </div>
-</div>
-</div>
 
-  </div>
-
-  <!-- TAB: TRAFFIC -->
-  <div id="tabTraffic" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden;">
-    <div style="padding:20px;overflow-y:auto;flex:1;min-height:0;">
-
-<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-  <button class="period-btn" id="btnDay" onclick="switchPeriod('day')">日</button>
-  <button class="period-btn active" id="btnWeek" onclick="switchPeriod('week')">周</button>
-  <button class="period-btn" id="btnMonth" onclick="switchPeriod('month')">月</button>
-  <button class="period-btn" id="btnYear" onclick="switchPeriod('year')">年</button>
-</div>
-<div style="color:#94a3b8;font-size:.75rem;margin-bottom:12px;" id="dateRange"></div>
-<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
-  <button onclick="exportTraffic()" style="padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--primary);font-size:.8rem;cursor:pointer;">导出 CSV</button>
-</div>
-<div style="color:#ef4444;font-size:.75rem;margin-bottom:8px;" id="statsError"></div>
-<div class="traffic-stats">
-  <div class="traffic-stat"><div class="num" id="tPV">0</div><div class="lbl">PV 浏览量</div></div>
-  <div class="traffic-stat"><div class="num" id="tUV">0</div><div class="lbl">UV 独立访客</div></div>
-  <div class="traffic-stat"><div class="num" id="tTotal">0</div><div class="lbl">累计PV</div></div>
-  <div class="traffic-stat"><div class="num" id="tWoW">0%</div><div class="lbl">环比</div></div>
-  <div class="traffic-stat"><div class="num" id="tYoY">0%</div><div class="lbl">同比</div></div>
-</div>
-<div class="chart-container">
-  <h4>近7天趋势 (PV)</h4>
-  <canvas id="chartLine"></canvas>
-</div>
-<div class="chart-container">
-  <h4>页面分布</h4>
-  <canvas id="chartPie"></canvas>
-</div>
-<div class="chart-container" id="monthlyChartWrap" style="display:none;">
-  <h4>月度趋势（柱状图）</h4>
-  <canvas id="chartMonthly"></canvas>
-</div>
-
-    </div>
-  </div>
-
-  <!-- SCRIPTS -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script>
-let allCustomers = [];
+        <script>
+    let allCustomers = [];
     let currentCustomerId = null;
     let adminImagePath = '';
 
@@ -541,7 +466,7 @@ let allCustomers = [];
     function selectCustomer(cid) {
         currentCustomerId = cid;
         document.getElementById('centerHeader').textContent =
-            allCustomers.find(c => c.id === cid)?.name || '客户';
+            allCustomers.find(c => c.id === cid)?.name || 'Customer';
         document.getElementById('replyBar').style.display = 'flex';
         document.getElementById('placeholderCenter').style.display = 'none';
         document.getElementById('chatMessages').style.display = 'flex';
@@ -562,12 +487,12 @@ let allCustomers = [];
                 document.getElementById('dEmail').textContent = c.email || '—';
                 document.getElementById('dCountry').value = c.country || '';
                 document.getElementById('dWhatsapp').value = c.whatsapp || '';
-                document.getElementById('dTag').value = c.tag || 'warm';
+                document.getElementById('dTag').value = c.tag || '';
                 document.getElementById('dPhone').textContent = c.phone || '—';
                 document.getElementById('dCompany').textContent = c.company || '—';
                 const genHtml = c.generation_count
-                    ? '<span style="color:#10b981;">● 已完成</span>'
-                    : '<span style="color:#f59e0b;">● 未生成</span>';
+                    ? '<span style="color:#10b981;">● Completed</span>'
+                    : '<span style="color:#f59e0b;">● No generation</span>';
                 document.getElementById('dGenStatus').innerHTML = genHtml;
             }
         } catch(e) {}
@@ -582,13 +507,13 @@ let allCustomers = [];
             if (data.ok && data.models.length) {
                 el.innerHTML = data.models.map(m => `
                     <div class="model-card">
-                        <div class="model-name">模型 ${m.task_id ? m.task_id.substring(0,8) : ''}...</div>
+                        <div class="model-name">Model ${m.task_id ? m.task_id.substring(0,8) : ''}...</div>
                         <div class="model-time">${m.completed_at || ''}</div>
-                        <a href="/api/download-model?task_id=${escapeAttr(m.task_id)}&format=glb">下载 GLB</a>
+                        <a href="/api/download-model?task_id=${escapeAttr(m.task_id)}&format=glb">Download GLB</a>
                     </div>
                 `).join('');
             } else {
-                el.innerHTML = '<span style="color:var(--text-secondary);font-size:.75rem;">暂无模型。</span>';
+                el.innerHTML = '<span style="color:var(--text-secondary);font-size:.75rem;">No models yet.</span>';
             }
         } catch(e) {}
     }
@@ -696,12 +621,295 @@ let allCustomers = [];
     }, 4000);
 
     loadCustomers();
-  </script>
-  <script>
-let chartLineInst = null, chartPieInst = null, chartMonthlyInst = null;
-    let currentPeriod = "week";
+</script>
+</body>
+</html>
 
-    function switchPeriod(p) {
+<div class="panel-right" id="panelRight">
+        <div class="right-tabs">
+            
+            
+        </div>
+
+        <!-- Detail Section -->
+        <div class="detail-section active" id="detailSection">
+            <div class="detail-field">
+                <label>姓名</label>
+                <div class="value" id="dName">—</div>
+            </div>
+            <div class="detail-field">
+                <label>邮箱</label>
+                <div class="value" id="dEmail">—</div>
+            </div>
+            <div class="detail-field">
+                <label>国家</label>
+                <input class="editable" id="dCountry" value="" onblur="saveField('country', this.value)" onkeydown="if(event.key==='Enter')this.blur()">
+            </div>
+            <div class="detail-field">
+                <label>WhatsApp</label>
+                <input class="editable" id="dWhatsapp" value="" onblur="saveField('whatsapp', this.value)" onkeydown="if(event.key==='Enter')this.blur()">
+            </div>
+            <div class="detail-field">
+                <label>标签</label>
+                <select id="dTag" onchange="saveField('tag', this.value)" style="width:100%;padding:7px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.8125rem;font-family:inherit;outline:none;">
+                    <option value="">--</option><option value="D">D</option><option value="C">C</option><option value="B">B</option><option value="A">A</option><option value="S">S</option><option value="SS">SS</option><option value="SSS">SSS</option>
+                </select>
+            </div>
+            <div class="detail-field">
+                <label>电话</label>
+                <div class="value" id="dPhone">—</div>
+            </div>
+            <div class="detail-field">
+                <label>公司</label>
+                <div class="value" id="dCompany">—</div>
+            </div>
+            <div class="detail-field">
+                <label>Generation</label>
+                <span id="dGenStatus" style="font-size:.75rem;"></span>
+            </div>
+            <hr style="border-color:var(--border);margin:14px 0;">
+            <h4 style="font-size:.75rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">3D Models</h4>
+            <div id="modelList">—</div>
+        </div>
+
+        <script>
+    let allCustomers = [];
+    let currentCustomerId = null;
+    let adminImagePath = '';
+
+    // ── Load customers ──
+    async function loadCustomers() {
+        try {
+            const res = await fetch('/api/admin/customers');
+            const data = await res.json();
+            if (data.ok) allCustomers = data.customers;
+            renderCustomerList();
+        } catch(e) {}
+    }
+
+    function renderCustomerList() {
+        const el = document.getElementById('customerList');
+        const q = (document.getElementById('customerSearch').value || '').toLowerCase();
+        const filtered = allCustomers.filter(c => {
+            if (!q) return true;
+            return (c.name || '').toLowerCase().includes(q) ||
+                   (c.email || '').toLowerCase().includes(q) ||
+                   (c.company || '').toLowerCase().includes(q);
+        });
+        el.innerHTML = filtered.map(c => `
+            <div class="customer-item ${c.id === currentCustomerId ? 'active' : ''}" onclick="selectCustomer('${escapeAttr(c.id)}')">
+                <div class="customer-avatar">${(c.name || '?')[0].toUpperCase()}</div>
+                <div class="customer-meta">
+                    <div class="customer-name">${escapeHtml(c.name)}${c.unread ? `<span class="badge-unread">${c.unread}</span>` : ''}</div>
+                    <div class="customer-last">${escapeHtml(c.email || '')}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // ── Select customer ──
+    function selectCustomer(cid) {
+        currentCustomerId = cid;
+        document.getElementById('centerHeader').textContent =
+            allCustomers.find(c => c.id === cid)?.name || 'Customer';
+        document.getElementById('replyBar').style.display = 'flex';
+        document.getElementById('placeholderCenter').style.display = 'none';
+        document.getElementById('chatMessages').style.display = 'flex';
+        loadCustomerDetail(cid);
+        loadMessages();
+        loadCustomerModels(cid);
+        renderCustomerList();
+    }
+
+    // ── Load customer detail ──
+    async function loadCustomerDetail(cid) {
+        try {
+            const res = await fetch('/api/admin/customer/' + cid);
+            const data = await res.json();
+            if (data.ok && data.customer) {
+                const c = data.customer;
+                document.getElementById('dName').textContent = c.name || '—';
+                document.getElementById('dEmail').textContent = c.email || '—';
+                document.getElementById('dCountry').value = c.country || '';
+                document.getElementById('dWhatsapp').value = c.whatsapp || '';
+                document.getElementById('dTag').value = c.tag || '';
+                document.getElementById('dPhone').textContent = c.phone || '—';
+                document.getElementById('dCompany').textContent = c.company || '—';
+                const genHtml = c.generation_count
+                    ? '<span style="color:#10b981;">● Completed</span>'
+                    : '<span style="color:#f59e0b;">● No generation</span>';
+                document.getElementById('dGenStatus').innerHTML = genHtml;
+            }
+        } catch(e) {}
+    }
+
+    // ── Load customer models ──
+    async function loadCustomerModels(cid) {
+        try {
+            const res = await fetch('/api/admin/customer/models?customer_id=' + cid);
+            const data = await res.json();
+            const el = document.getElementById('modelList');
+            if (data.ok && data.models.length) {
+                el.innerHTML = data.models.map(m => `
+                    <div class="model-card">
+                        <div class="model-name">Model ${m.task_id ? m.task_id.substring(0,8) : ''}...</div>
+                        <div class="model-time">${m.completed_at || ''}</div>
+                        <a href="/api/download-model?task_id=${escapeAttr(m.task_id)}&format=glb">Download GLB</a>
+                    </div>
+                `).join('');
+            } else {
+                el.innerHTML = '<span style="color:var(--text-secondary);font-size:.75rem;">No models yet.</span>';
+            }
+        } catch(e) {}
+    }
+
+    // ── Save editable field ──
+    async function saveField(field, value) {
+        if (!currentCustomerId) return;
+        try {
+            await fetch('/api/admin/customer/update', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ customer_id: currentCustomerId, field, value })
+            });
+        } catch(e) {}
+    }
+
+    // ── Load messages ──
+    async function loadMessages() {
+        if (!currentCustomerId) return;
+        try {
+            const res = await fetch('/api/admin/messages/' + currentCustomerId);
+            const data = await res.json();
+            if (!data.ok) return;
+            const el = document.getElementById('chatMessages');
+            const wasAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+            el.innerHTML = data.messages.map(m => {
+                const hasImg = m.image_path && m.image_path.trim();
+                const cls = m.sender === 'customer' ? 'customer' :
+                            m.sender === 'system' ? 'system' : 'admin';
+                const av = m.sender === 'customer' ? 'C' : 'A';
+                const cont = escapeHtml(m.content || '').replace(/\n/g,'<br>');
+                const imgH = hasImg ? `<img src="${escapeAttr(m.image_path)}" loading="lazy">` : '';
+                return `
+                    <div class="msg-row ${cls}">
+                        <div class="msg-avatar-sm">${av}</div>
+                        <div class="msg-bubble">
+                            <div>${cont}${imgH}</div>
+                            <div class="msg-time">${fmtTime(m.created_at)}</div>
+                        </div>
+                    </div>`;
+            }).join('');
+            if (wasAtBottom) el.scrollTop = el.scrollHeight;
+        } catch(e) {}
+    }
+
+    // ── Send admin reply ──
+    async function sendAdminReply() {
+        const input = document.getElementById('adminReplyInput');
+        const content = input.value.trim();
+        if (!currentCustomerId || (!content && !adminImagePath)) return;
+
+        const formData = new FormData();
+        formData.append('customer_id', currentCustomerId);
+        formData.append('content', content);
+        if (adminImagePath) {
+            // When we have freshly uploaded image via /api/upload-chat-image
+            formData.append('image_path', adminImagePath);
+        }
+
+        await fetch('/api/admin/reply', {
+            method: 'POST',
+            body: formData
+        });
+        input.value = '';
+        removeAdminImg();
+        loadMessages();
+        loadCustomers();
+    }
+
+    // ── Admin image handling ──
+    async function handleAdminImage(input) {
+        if (!input.files.length) return;
+        const file = input.files[0];
+        if (file.size > 10 * 1024 * 1024) { alert('Image too large. Max 10MB.'); input.value=''; return; }
+        const fd = new FormData(); fd.append('image', file);
+        try {
+            const res = await fetch('/api/upload-chat-image', {method:'POST', body:fd});
+            const data = await res.json();
+            if (data.ok) {
+                adminImagePath = data.image_path;
+                document.getElementById('adminImgPreviewSrc').src = data.url;
+                document.getElementById('adminImgPreview').style.display = 'inline-block';
+            }
+        } catch(e) {}
+        input.value = '';
+    }
+    function removeAdminImg() {
+        adminImagePath = '';
+        document.getElementById('adminImgPreview').style.display = 'none';
+    }
+
+    // ── Helpers ──
+    function fmtTime(ts) {
+        if (!ts) return '';
+        const d = new Date(ts + 'Z');
+        return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    }
+    function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
+    function escapeAttr(s) { return (s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+    // ── Polling ──
+    setInterval(() => {
+        loadCustomers();
+        if (currentCustomerId) loadMessages();
+    }, 4000);
+
+    loadCustomers();
+</script>
+</body>
+</html>
+
+    </div>
+    <div id="tabTraffic" style="display:none;flex:1;overflow:hidden;">
+        <div class="traffic-container">
+style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;"><button class="period-btn" id="btnDay" onclick="switchPeriod('day')">今日</button><button class="period-btn active" id="btnWeek" onclick="switchPeriod('week')">本周</button><button class="period-btn" id="btnMonth" onclick="switchPeriod('month')">本月</button><button class="period-btn" id="btnYear" onclick="switchPeriod('year')">今年</button></div><div style="color:#94a3b8;font-size:.75rem;margin-bottom:12px;" id="dateRange"></div><div style="color:#ef4444;font-size:.75rem;margin-bottom:8px;" id="statsError"></div><div class="traffic-stats">
+                <div class="traffic-stat"><div class="num" id="tPV">0</div><div class="lbl">PV（浏览）</div></div>
+                <div class="traffic-stat"><div class="num" id="tUV">0</div><div class="lbl">UV（访客）</div></div>
+                <div class="traffic-stat"><div class="num" id="tTotal">0</div><div class="lbl">累计总PV</div></div>
+                <div class="traffic-stat"><div class="num" id="tWoW">0%</div><div class="lbl">环比</div></div>
+                <div class="traffic-stat"><div class="num" id="tYoY">0%</div><div class="lbl">同比</div></div>
+            </div>
+            <div class="chart-container">
+                <h4>Last 7 Days (PV)</h4>
+                <canvas id="chartLine"></canvas>
+            </div>
+            <div class="chart-container">
+                <h4>Page Distribution</h4>
+                <canvas id="chartPie"></canvas>
+            </div>
+        </div>
+        <div class="chart-container" id="monthlyChartWrap" style="display:none;">
+            <h4>月度趋势（年视图）</h4>
+            <canvas id="chartMonthly"></canvas>
+        </div>
+        </div>
+    </div>
+</div>
+<script>
+function switchTab(tab) {
+    document.querySelectorAll(".nav-tab").forEach(function(b) {
+        b.classList.toggle("active", b.id === "tabBtn" + tab.charAt(0).toUpperCase() + tab.slice(1));
+    });
+    document.getElementById("tabChat").style.display = tab === "chat" ? "flex" : "none";
+    document.getElementById("tabTraffic").style.display = tab === "traffic" ? "block" : "none";
+    if (tab === "traffic" && typeof loadTraffic === "function") {
+        setTimeout(loadTraffic, 200);
+    }
+}
+</script>
+<script>
+function switchPeriod(p) {
         currentPeriod = p;
         document.querySelectorAll(".period-btn").forEach(b => b.classList.remove("active"));
         const map = {day:"btnDay", week:"btnWeek", month:"btnMonth", year:"btnYear"};
@@ -805,208 +1013,203 @@ let chartLineInst = null, chartPieInst = null, chartMonthlyInst = null;
             document.getElementById("statsError").textContent = "加载失败: " + e.message;
         }
     }
-  </script>
-  <script>
-function switchTab(tab) {
-  document.querySelectorAll(".nav-tab").forEach(function(b) { b.classList.remove("active"); });
-  var btnId = "tabBtn" + tab.charAt(0).toUpperCase() + tab.slice(1);
-  document.getElementById(btnId).classList.add("active");
-  document.getElementById("tabChat").style.display = tab === "chat" ? "flex" : "none";
-  document.getElementById("tabTraffic").style.display = tab === "traffic" ? "flex" : "none";
-  if (tab === "traffic" && typeof loadTraffic === "function") {
-    setTimeout(loadTraffic, 300);
-  }
-}
-  </script>
+    loadTraffic();
+</script>
+</script>
 <script>
-// Quick reply management
-async function loadQuickReplies() {
-    try {
-        const res = await fetch('/api/quick-replies');
-        const data = await res.json();
-        if (!data.ok) return;
-        const el = document.getElementById('qrList');
-        if (!el) return;
-        el.innerHTML = data.replies.map((r, i) => 
-            '<div style="display:flex;align-items:center;gap:4px;margin-bottom:4px;">' +
-            '<span style="flex:1;font-size:.75rem;color:var(--text);">' + escapeHtml(r) + '</span>' +
-            '<button onclick="deleteQuickReply(' + i + ')" style="padding:2px 6px;border-radius:4px;border:1px solid var(--border);background:transparent;color:#ef4444;font-size:.625rem;cursor:pointer;">\u5220\u9664</button></div>'
-        ).join('');
-    } catch(e) {}
-}
+    let allCustomers = [];
+    let currentCustomerId = null;
+    let adminImagePath = '';
 
-async function addQuickReply() {
-    const input = document.getElementById('qrInput');
-    const content = input.value.trim();
-    if (!content) return;
-    const res = await fetch('/api/quick-replies', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({content}) });
-    const data = await res.json();
-    if (data.ok) { input.value = ''; loadQuickReplies(); loadAdminQuickReplies(); }
-}
+    // ── Load customers ──
+    async function loadCustomers() {
+        try {
+            const res = await fetch('/api/admin/customers');
+            const data = await res.json();
+            if (data.ok) allCustomers = data.customers;
+            renderCustomerList();
+        } catch(e) {}
+    }
 
-async function deleteQuickReply(index) {
-    if (!confirm('\u786e\u5b9a\u5220\u9664\u8be5\u5feb\u6377\u56de\u590d\uff1f')) return;
-    const res = await fetch('/api/quick-replies/' + index, { method:'DELETE' });
-    const data = await res.json();
-    if (data.ok) { loadQuickReplies(); loadAdminQuickReplies(); }
-}
-
-// Load quick replies for admin reply textarea hints
-async function loadAdminQuickReplies() {
-    try {
-        const res = await fetch('/api/quick-replies');
-        const data = await res.json();
-        if (!data.ok || !data.replies) return;
-        const replyArea = document.querySelector('.reply-bar textarea');
-        if (!replyArea) return;
-        // Remove old hint section
-        const oldHint = document.getElementById('qrHints');
-        if (oldHint) oldHint.remove();
-        const hintDiv = document.createElement('div');
-        hintDiv.id = 'qrHints';
-        hintDiv.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;padding:4px 8px;border-bottom:1px solid var(--border);';
-        data.replies.forEach(function(r) {
-            var btn = document.createElement('button');
-            btn.textContent = r;
-            btn.style.cssText = 'padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:.6875rem;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;';
-            btn.title = r;
-            btn.onclick = function() {
-                var ta = document.querySelector('.reply-bar textarea');
-                if (ta) { ta.value = r; ta.focus(); }
-            };
-            hintDiv.appendChild(btn);
+    function renderCustomerList() {
+        const el = document.getElementById('customerList');
+        const q = (document.getElementById('customerSearch').value || '').toLowerCase();
+        const filtered = allCustomers.filter(c => {
+            if (!q) return true;
+            return (c.name || '').toLowerCase().includes(q) ||
+                   (c.email || '').toLowerCase().includes(q) ||
+                   (c.company || '').toLowerCase().includes(q);
         });
-        var replyBar = document.querySelector('.reply-bar');
-        if (replyBar) replyBar.insertBefore(hintDiv, replyBar.firstChild);
-    } catch(e) {}
-}
-
-// Tag filter
-let currentTagFilter = '';
-
-function filterByTag(btn, tag) {
-    currentTagFilter = tag;
-    document.querySelectorAll('.tag-filter-btn').forEach(b => {
-        b.style.background = b === btn ? 'var(--primary)' : 'transparent';
-        b.style.color = b === btn ? '#fff' : 'var(--text-secondary)';
-    });
-    renderCustomerList();
-}
-
-// Override renderCustomerList to support tag filter
-const origRender = window.renderCustomerList;
-window.renderCustomerList = function() {
-    if (!window.allCustomers) { if (origRender) origRender(); return; }
-    const el = document.getElementById('customerList');
-    const q = (document.getElementById('customerSearch').value || '').toLowerCase();
-    let filtered = window.allCustomers.filter(c => {
-        if (currentTagFilter && c.tag !== currentTagFilter) return false;
-        if (!q) return true;
-        return (c.name || '').toLowerCase().includes(q) ||
-               (c.email || '').toLowerCase().includes(q) ||
-               (c.company || '').toLowerCase().includes(q);
-    });
-    el.innerHTML = filtered.map(c => {
-        const checked = (window.__selectedCustomers || []).includes(c.id) ? 'checked' : '';
-        return '<div class="customer-item ' + (c.id === window.currentCustomerId ? 'active' : '') + '">' +
-            '<input type="checkbox" class="cust-check" value="' + escapeAttr(c.id) + '" ' + checked + ' onchange="toggleSelect(this)" style="margin-right:6px;">' +
-            '<div style="flex:1;cursor:pointer;" onclick="window.selectCustomer('' + escapeAttr(c.id) + '')">' +
-            '<div class="customer-avatar">' + (c.name || '?')[0].toUpperCase() + '</div>' +
-            '<div class="customer-meta">' +
-            '<div class="customer-name">' + escapeHtml(c.name) + (c.unread ? '<span class="badge-unread">' + c.unread + '</span>' : '') + '</div>' +
-            '<div class="customer-last">' + escapeHtml(c.email || '') + '</div></div></div></div>';
-    }).join('');
-};
-
-// Batch operations
-let selectedCustomers = [];
-
-function toggleSelect(chk) {
-    if (chk.checked) {
-        if (!selectedCustomers.includes(chk.value)) selectedCustomers.push(chk.value);
-    } else {
-        selectedCustomers = selectedCustomers.filter(id => id !== chk.value);
+        el.innerHTML = filtered.map(c => `
+            <div class="customer-item ${c.id === currentCustomerId ? 'active' : ''}" onclick="selectCustomer('${escapeAttr(c.id)}')">
+                <div class="customer-avatar">${(c.name || '?')[0].toUpperCase()}</div>
+                <div class="customer-meta">
+                    <div class="customer-name">${escapeHtml(c.name)}${c.unread ? `<span class="badge-unread">${c.unread}</span>` : ''}</div>
+                    <div class="customer-last">${escapeHtml(c.email || '')}</div>
+                </div>
+            </div>
+        `).join('');
     }
-    updateBatchBar();
-}
 
-function updateBatchBar() {
-    const bar = document.getElementById('batchBar');
-    const count = document.getElementById('batchCount');
-    if (selectedCustomers.length > 0) {
-        bar.style.display = 'flex';
-        count.textContent = '\u5df2\u9009 ' + selectedCustomers.length + ' \u4e2a';
-    } else {
-        bar.style.display = 'none';
+    // ── Select customer ──
+    function selectCustomer(cid) {
+        currentCustomerId = cid;
+        document.getElementById('centerHeader').textContent =
+            allCustomers.find(c => c.id === cid)?.name || 'Customer';
+        document.getElementById('replyBar').style.display = 'flex';
+        document.getElementById('placeholderCenter').style.display = 'none';
+        document.getElementById('chatMessages').style.display = 'flex';
+        loadCustomerDetail(cid);
+        loadMessages();
+        loadCustomerModels(cid);
+        renderCustomerList();
     }
-}
 
-async function batchSetTag() {
-    const tag = document.getElementById('batchTagSelect').value;
-    if (!tag || !selectedCustomers.length) return;
-    if (!confirm('\u786e\u5b9a\u5c06 ' + selectedCustomers.length + ' \u4e2a\u5ba2\u6237\u7684\u6807\u7b7e\u4fee\u6539\u4e3a ' + tag + ' \u5417\uff1f')) return;
-    try {
-        for (const cid of selectedCustomers) {
+    // ── Load customer detail ──
+    async function loadCustomerDetail(cid) {
+        try {
+            const res = await fetch('/api/admin/customer/' + cid);
+            const data = await res.json();
+            if (data.ok && data.customer) {
+                const c = data.customer;
+                document.getElementById('dName').textContent = c.name || '—';
+                document.getElementById('dEmail').textContent = c.email || '—';
+                document.getElementById('dCountry').value = c.country || '';
+                document.getElementById('dWhatsapp').value = c.whatsapp || '';
+                document.getElementById('dTag').value = c.tag || '';
+                document.getElementById('dPhone').textContent = c.phone || '—';
+                document.getElementById('dCompany').textContent = c.company || '—';
+                const genHtml = c.generation_count
+                    ? '<span style="color:#10b981;">● Completed</span>'
+                    : '<span style="color:#f59e0b;">● No generation</span>';
+                document.getElementById('dGenStatus').innerHTML = genHtml;
+            }
+        } catch(e) {}
+    }
+
+    // ── Load customer models ──
+    async function loadCustomerModels(cid) {
+        try {
+            const res = await fetch('/api/admin/customer/models?customer_id=' + cid);
+            const data = await res.json();
+            const el = document.getElementById('modelList');
+            if (data.ok && data.models.length) {
+                el.innerHTML = data.models.map(m => `
+                    <div class="model-card">
+                        <div class="model-name">Model ${m.task_id ? m.task_id.substring(0,8) : ''}...</div>
+                        <div class="model-time">${m.completed_at || ''}</div>
+                        <a href="/api/download-model?task_id=${escapeAttr(m.task_id)}&format=glb">Download GLB</a>
+                    </div>
+                `).join('');
+            } else {
+                el.innerHTML = '<span style="color:var(--text-secondary);font-size:.75rem;">No models yet.</span>';
+            }
+        } catch(e) {}
+    }
+
+    // ── Save editable field ──
+    async function saveField(field, value) {
+        if (!currentCustomerId) return;
+        try {
             await fetch('/api/admin/customer/update', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ customer_id: cid, field: 'tag', value: tag })
+                body: JSON.stringify({ customer_id: currentCustomerId, field, value })
             });
+        } catch(e) {}
+    }
+
+    // ── Load messages ──
+    async function loadMessages() {
+        if (!currentCustomerId) return;
+        try {
+            const res = await fetch('/api/admin/messages/' + currentCustomerId);
+            const data = await res.json();
+            if (!data.ok) return;
+            const el = document.getElementById('chatMessages');
+            const wasAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+            el.innerHTML = data.messages.map(m => {
+                const hasImg = m.image_path && m.image_path.trim();
+                const cls = m.sender === 'customer' ? 'customer' :
+                            m.sender === 'system' ? 'system' : 'admin';
+                const av = m.sender === 'customer' ? 'C' : 'A';
+                const cont = escapeHtml(m.content || '').replace(/\n/g,'<br>');
+                const imgH = hasImg ? `<img src="${escapeAttr(m.image_path)}" loading="lazy">` : '';
+                return `
+                    <div class="msg-row ${cls}">
+                        <div class="msg-avatar-sm">${av}</div>
+                        <div class="msg-bubble">
+                            <div>${cont}${imgH}</div>
+                            <div class="msg-time">${fmtTime(m.created_at)}</div>
+                        </div>
+                    </div>`;
+            }).join('');
+            if (wasAtBottom) el.scrollTop = el.scrollHeight;
+        } catch(e) {}
+    }
+
+    // ── Send admin reply ──
+    async function sendAdminReply() {
+        const input = document.getElementById('adminReplyInput');
+        const content = input.value.trim();
+        if (!currentCustomerId || (!content && !adminImagePath)) return;
+
+        const formData = new FormData();
+        formData.append('customer_id', currentCustomerId);
+        formData.append('content', content);
+        if (adminImagePath) {
+            // When we have freshly uploaded image via /api/upload-chat-image
+            formData.append('image_path', adminImagePath);
         }
-        alert('\u4fee\u6539\u6210\u529f');
-        clearSelection();
-        if (window.loadCustomers) window.loadCustomers();
-    } catch(e) { alert('\u5931\u8d25: ' + e.message); }
-}
 
-function clearSelection() {
-    selectedCustomers = [];
-    document.querySelectorAll('.cust-check').forEach(chk => chk.checked = false);
-    updateBatchBar();
-}
-
-// Ban toggle
-async function toggleBan() {
-    if (!window.currentCustomerId) return;
-    const btn = document.getElementById('banBtn');
-    const isBanned = btn.textContent.includes('\u79fb\u51fa');
-    if (!isBanned && !confirm('\u786e\u5b9a\u5c06\u8be5\u5ba2\u6237\u52a0\u5165\u9ed1\u540d\u5355\uff1f')) return;
-    const newVal = isBanned ? 0 : 1;
-    try {
-        await fetch('/api/admin/customer/update', {
+        await fetch('/api/admin/reply', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ customer_id: window.currentCustomerId, field: 'banned', value: newVal })
+            body: formData
         });
-        btn.textContent = newVal ? '\u79fb\u51fa\u9ed1\u540d\u5355' : '\u52a0\u5165\u9ed1\u540d\u5355';
-        btn.style.borderColor = newVal ? '#10b981' : '#ef4444';
-        btn.style.color = newVal ? '#10b981' : '#ef4444';
-    } catch(e) { alert('\u5931\u8d25: ' + e.message); }
-}
+        input.value = '';
+        removeAdminImg();
+        loadMessages();
+        loadCustomers();
+    }
 
-// Export traffic CSV
-async function exportTraffic() {
-    const period = window.currentPeriod || 'week';
-    window.open('/api/admin/traffic/export?period=' + period, '_blank');
-}
+    // ── Admin image handling ──
+    async function handleAdminImage(input) {
+        if (!input.files.length) return;
+        const file = input.files[0];
+        if (file.size > 10 * 1024 * 1024) { alert('Image too large. Max 10MB.'); input.value=''; return; }
+        const fd = new FormData(); fd.append('image', file);
+        try {
+            const res = await fetch('/api/upload-chat-image', {method:'POST', body:fd});
+            const data = await res.json();
+            if (data.ok) {
+                adminImagePath = data.image_path;
+                document.getElementById('adminImgPreviewSrc').src = data.url;
+                document.getElementById('adminImgPreview').style.display = 'inline-block';
+            }
+        } catch(e) {}
+        input.value = '';
+    }
+    function removeAdminImg() {
+        adminImagePath = '';
+        document.getElementById('adminImgPreview').style.display = 'none';
+    }
 
-// Escape helper (if not already defined)
-if (typeof escapeHtml === 'undefined') {
-    window.escapeHtml = function(s) { var d = document.createElement("div"); d.textContent = s||""; return d.innerHTML; };
-}
-if (typeof escapeAttr === 'undefined') {
-    window.escapeAttr = function(s) { return (s||"").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); };
-}
+    // ── Helpers ──
+    function fmtTime(ts) {
+        if (!ts) return '';
+        const d = new Date(ts + 'Z');
+        return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    }
+    function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
+    function escapeAttr(s) { return (s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
-// Init
-setTimeout(function() {
-    loadQuickReplies();
-    loadAdminQuickReplies();
-}, 1000);
+    // ── Polling ──
+    setInterval(() => {
+        loadCustomers();
+        if (currentCustomerId) loadMessages();
+    }, 4000);
+
+    loadCustomers();
 </script>
 </body>
 </html>
-
-
-
-
