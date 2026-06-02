@@ -383,20 +383,20 @@
     <!-- ═══ LEFT ═══ -->
     <div class="panel-left">
         <div class="panel-left-header">
-            <h2>Customers</h2>
+            <h2>客户</h2>
             <button class="btn-logout" onclick="fetch('/api/admin/logout',{method:'POST'}).then(()=>location.reload())">退出</button>
         </div>
         <div class="search-wrap" style="display:none;">
-            <input type="text" id="customerSearch" placeholder="Search customers..." oninput="renderCustomerList()">
+            <input type="text" id="customerSearch" placeholder="搜索客户..." oninput="renderCustomerList()">
         </div>
         <div class="customer-list" id="customerList"></div>
     </div>
 
     <!-- ═══ CENTER ═══ -->
     <div class="panel-center" id="panelCenter">
-        <div class="panel-center-header" id="centerHeader">Select a customer</div>
+        <div class="panel-center-header" id="centerHeader">选择一个客户</div>
         <div class="chat-messages" id="chatMessages"></div>
-        <div class="placeholder-center" id="placeholderCenter">Select a customer to view conversation</div>
+        <div class="placeholder-center" id="placeholderCenter">选择一个客户 查看对话</div>
         <div class="reply-bar" id="replyBar" style="display:none;">
             <div id="adminImgPreview" style="display:none;margin-bottom:6px;" class="img-preview-row">
                 <img id="adminImgPreviewSrc" src="">
@@ -406,8 +406,8 @@
             <button class="btn-icon-sm" onclick="document.getElementById('adminImageInput').click()" title="Attach image">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
             </button>
-            <textarea id="adminReplyInput" placeholder="Type reply..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAdminReply()}"></textarea>
-            <button class="btn-send-sm" onclick="sendAdminReply()">Send</button>
+            <textarea id="adminReplyInput" placeholder="输入回复..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAdminReply()}"></textarea>
+            <button class="btn-send-sm" onclick="sendAdminReply()">发送</button>
         </div>
     </div>
 
