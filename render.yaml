@@ -19,6 +19,8 @@
         value: /opt/render/project/data/data.db
       - key: UPLOAD_DIR
         value: /opt/render/project/data/uploads
+      - key: SESSION_DIR
+        value: /opt/render/project/data/flask_session
     disk:
       name: app-data
       mountPath: /opt/render/project/data
