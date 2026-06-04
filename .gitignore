@@ -2,9 +2,8 @@
 __pycache__/
 *.pyc
 data.db
-uploads/chat/*
-uploads/models/*
-uploads/temp/*
+data.db-shm
+data.db-wal
 backups/
 flask_session/
 .env
@@ -15,3 +14,57 @@ ngrok*
 cf*
 *.bak
 *.bak2
+*.bak3
+
+# Temp scripts
+debug*.py
+deploy*.py
+push*.py
+test*.py
+fix*.py
+auto_*.py
+start_tunnel*.py
+check_*.py
+nav_*.py
+render_auto*.py
+
+# Screenshots & images
+*.png
+*.jpg
+*.jpeg
+
+# Temp output
+app_output.txt
+login_output.txt
+push_output.txt
+push_error.txt
+push_cmd.txt
+tunnel_url.txt
+wf_payload.json
+tree_payload.json
+tree_test.json
+koyeb_response.json
+test_payload.json
+push_to_github.py
+push_to_github.ps1
+push_urllib.py
+push_via_api.py
+push_via_gh*.py
+push_wf*.py
+push_full*.py
+push_light.py
+push_oneshot.py
+push_safe.py
+push_simple.py
+push_content.py
+push_cmd.py
+push_all.py
+
+# MSI/EXE
+*.msi
+
+# Debug HTML
+admin_page_debug.html
+
+# Large 3D model test files
+uploads/models/*.glb

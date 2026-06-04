@@ -1,0 +1,15 @@
+[Unit]
+Description=InflatableModel HK API Proxy
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/inflatable-hk
+EnvironmentFile=/opt/inflatable-hk/.env
+ExecStart=/opt/inflatable-hk/venv/bin/gunicorn -w 2 -b 127.0.0.1:8080 hk_proxy:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
