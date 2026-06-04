@@ -6,7 +6,7 @@
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
     envVars:
       - key: PYTHON_VERSION
-        value: 3.12
+        value: "3.12"
       - key: FLASK_SECRET_KEY
         generateValue: true
       - key: ADMIN_PASSWORD
@@ -15,7 +15,11 @@
         value: https://api.ai3d.cloud.tencent.com
       - key: HUNYUAN_MODEL
         value: "3.0"
+      - key: DATABASE_PATH
+        value: /opt/render/project/data/data.db
+      - key: UPLOAD_DIR
+        value: /opt/render/project/data/uploads
     disk:
-      name: data
-      mountPath: /opt/render/data
+      name: app-data
+      mountPath: /opt/render/project/data
       sizeGB: 1
