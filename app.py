@@ -1480,7 +1480,7 @@ def api_download_chat(filename):
 
 
 @app.route("/api/download/uploads/models/<path:filename>")
-def api_download_model(filename):
+def api_download_model_file(filename):
     return send_from_directory(MODELS_DIR, filename, as_attachment=True)
 
 
