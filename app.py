@@ -13,6 +13,8 @@ import time
 import uuid
 from datetime import datetime, timedelta
 
+from typing import Optional
+
 import requests
 from flask import (
     Flask,
@@ -195,6 +197,16 @@ verification_codes: dict = {}
 verified_sessions: set = set()
 
 
+def _session_id() -> str:
+    """Get session ID safely - works with or without flask-session."""
+    sid = getattr(session, 'sid', None)
+    if sid:
+        return sid
+    import hashlib
+    data = str(session.get('customer_id', '')) + str(session.get('contact_email', ''))
+    return hashlib.md5(data.encode()).hexdigest() if data else str(id(session))
+
+
 # 鈹€鈹€ Helpers 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 def allowed_image(filename: str) -> bool:
@@ -233,7 +245,7 @@ def auto_login_from_token():
         session["contact_email"] = row["email"]
         session["contact_name"] = row["name"]
         session["verified"] = True
-        verified_sessions.add(session.sid)
+        verified_sessions.add(_session_id())
 
 
 @app.before_request
@@ -351,7 +363,7 @@ def api_login():
 
     # Generate & send verification code
     code = generate_code(6)
-    verification_codes[session.sid] = {
+    verification_codes[_session_id()] = {
         "email": email,
         "code": code,
         "expires": datetime.utcnow() + timedelta(minutes=5),
@@ -429,7 +441,7 @@ def api_auth_google():
     session["contact_email"] = google_email
     session["contact_name"] = google_name
     session["verified"] = True
-    verified_sessions.add(session.sid)
+    verified_sessions.add(_session_id())
 
     # Generate persistent auto-login token (30 days)
     persistent_token = uuid.uuid4().hex + secrets.token_hex(16)
@@ -458,7 +470,7 @@ def api_verify():
     data = request.get_json(force=True, silent=True) or {}
     user_code = (data.get("code") or "").strip()
 
-    record = verification_codes.get(session.sid)
+    record = verification_codes.get(_session_id())
     if not record:
         return jsonify({"ok": False, "error": "No verification in progress."}), 400
 
@@ -475,9 +487,9 @@ def api_verify():
     if user_code != record["code"]:
         return jsonify({"ok": False, "error": "Invalid code."}), 400
 
-    verification_codes.pop(session.sid, None)
+    verification_codes.pop(_session_id(), None)
     session["verified"] = True
-    verified_sessions.add(session.sid)
+    verified_sessions.add(_session_id())
 
     cid = session.get("customer_id")
     email = session.get("contact_email", "")
@@ -499,7 +511,7 @@ def api_verify():
 
 @app.route("/api/resend-code", methods=["POST"])
 def api_resend():
-    record = verification_codes.get(session.sid)
+    record = verification_codes.get(_session_id())
     if not record:
         return jsonify({"ok": False, "error": "No active verification session."}), 400
 
@@ -532,7 +544,7 @@ def api_resend():
 
 @app.route("/api/logout", methods=["GET", "POST"])
 def api_logout():
-    verified_sessions.discard(session.sid)
+    verified_sessions.discard(_session_id())
     # Clear persistent token from DB
     cid = session.get("customer_id")
     if cid:
@@ -582,7 +594,7 @@ def _extract_api_error(data: dict) -> str:
     return str(data)[:300]
 
 
-def _submit_3d_job(image_base64: str | None = None, prompt: str | None = None) -> dict | None:
+def _submit_3d_job(image_base64: Optional[str] = None, prompt: Optional[str] = None) -> Optional[dict]:
     body = {"Model": config.HUNYUAN_MODEL}
     if image_base64:
         body["ImageBase64"] = image_base64
@@ -607,7 +619,7 @@ def _submit_3d_job(image_base64: str | None = None, prompt: str | None = None) -
         raise RuntimeError(f"Submit request failed: {e}")
 
 
-def _query_3d_job(job_id: str) -> dict | None:
+def _query_3d_job(job_id: str) -> Optional[dict]:
     body = {"JobId": job_id}
     try:
         resp = requests.post(HUNYUAN_QUERY_URL, headers=HUNYUAN_HEADERS, json=body, timeout=30)

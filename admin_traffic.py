@@ -25,13 +25,22 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
+_date_column_ensured = False
+
 def _ensure_date_column():
-    with get_db() as conn:
-        try:
-            conn.execute("SELECT date FROM traffic LIMIT 1")
-        except sqlite3.OperationalError:
-            conn.execute("ALTER TABLE traffic ADD COLUMN date TEXT DEFAULT ''")
-_ensure_date_column()
+    global _date_column_ensured
+    if _date_column_ensured:
+        return
+    try:
+        with get_db() as conn:
+            try:
+                conn.execute("SELECT date FROM traffic LIMIT 1")
+            except sqlite3.OperationalError:
+                conn.execute("ALTER TABLE traffic ADD COLUMN date TEXT DEFAULT ''")
+        _date_column_ensured = True
+    except sqlite3.OperationalError:
+        # Table doesn't exist yet — will be created by init_db() in app.py
+        pass
 
 def _pv_uv_for_range(start_date, end_date, where_extra="", params=None):
     if params is None: params = []
@@ -83,6 +92,7 @@ def _calc_growth(current, previous):
 @traffic_bp.route("/summary")
 @admin_required
 def api_traffic_summary():
+    _ensure_date_column()
     period = request.args.get("period", "week")
     ref_str = request.args.get("date", datetime.now().strftime("%Y-%m-%d"))
     ref = datetime.strptime(ref_str, "%Y-%m-%d").date()
