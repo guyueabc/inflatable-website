@@ -7,7 +7,7 @@ import smtplib
 import ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import Optional
+from typing import Optional, Tuple
 
 import config
 
@@ -21,7 +21,7 @@ def is_smtp_configured() -> bool:
     )
 
 
-def send_verification_code(to_email: str, code: str) -> tuple[bool, Optional[str]]:
+def send_verification_code(to_email: str, code: str) -> Tuple[bool, Optional[str]]:
     """
     Send a verification code email.
 

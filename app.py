@@ -191,7 +191,7 @@ except Exception as e:
     traceback.print_exc()
 
 # 鈹€鈹€ In-memory stores 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
-verification_codes: dict[str, dict] = {}
+verification_codes: dict = {}
 verified_sessions: set = set()
 
 
