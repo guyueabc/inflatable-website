@@ -355,13 +355,24 @@
 
             try {
                 const resp = await fetch('/api/generate-3d', { method: 'POST', body: formData });
-                const data = await resp.json();
+                let data;
+                try {
+                    data = await resp.json();
+                } catch(jsonErr) {
+                    stopTimer();
+                    statusText.textContent = 'Server error. Redirecting to chat...';
+                    setTimeout(() => { window.location.href = '/messages'; }, 2000);
+                    return;
+                }
 
                 if (!data.ok) {
                     stopTimer();
                     statusText.textContent = data.error || 'Generation failed.';
+                    // Redirect to chat page on any generation error
                     if (data.redirect) {
-                        setTimeout(() => { window.location.href = data.redirect; }, 3000);
+                        setTimeout(() => { window.location.href = data.redirect; }, 2000);
+                    } else {
+                        setTimeout(() => { window.location.href = '/messages'; }, 3000);
                     }
                     generateBtn.disabled = false;
                     return;
@@ -373,7 +384,8 @@
 
             } catch (err) {
                 stopTimer();
-                statusText.textContent = 'Network error. Please try again.';
+                statusText.textContent = 'Network error. Redirecting to chat...';
+                setTimeout(() => { window.location.href = '/messages'; }, 2000);
                 generateBtn.disabled = false;
             }
         }
@@ -384,13 +396,19 @@
             pollInterval = setInterval(async () => {
                 if (Date.now() - pollStartTime > MAX_POLL_DURATION) {
                     stopTimer();
-                    statusText.textContent = '生成超时，正在跳转到会话...';
+                    statusText.textContent = 'Generation timed out. Redirecting to chat...';
                     setTimeout(() => { window.location.href = '/messages'; }, 2000);
                     return;
                 }
                 try {
                     const resp = await fetch('/api/task-status/' + taskId);
-                    const data = await resp.json();
+                    let data;
+                    try {
+                        data = await resp.json();
+                    } catch(jsonErr) {
+                        // Non-JSON response — keep polling transiently
+                        return;
+                    }
 
                     if (data.status === 'done' || data.status === 'completed') {
                         stopTimer();
@@ -399,8 +417,13 @@
 
                     } else if (data.status === 'fail' || data.status === 'failed') {
                         stopTimer();
-                        statusText.textContent = 'Generation failed. Redirecting to messages...';
-                        setTimeout(() => { window.location.href = '/messages'; }, 3000);
+                        statusText.textContent = data.error || 'Generation failed. Redirecting to chat...';
+                        setTimeout(() => { window.location.href = '/messages'; }, 2000);
+
+                    } else if (data.status === 'error') {
+                        stopTimer();
+                        statusText.textContent = data.error || 'API error. Redirecting to chat...';
+                        setTimeout(() => { window.location.href = '/messages'; }, 2000);
 
                     } else {
                         if (data.progress >= 50) {

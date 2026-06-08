@@ -641,7 +641,7 @@ def _query_3d_job(job_id: str) -> Optional[dict]:
 @app.route("/api/generate-3d", methods=["POST"])
 def api_generate_3d():
     if not is_logged_in():
-        return jsonify({"ok": False, "error": "Please log in first."}), 403
+        return jsonify({"ok": False, "error": "Please log in first.", "redirect": "/login"}), 403
 
     cid = session.get("customer_id")
 
@@ -650,9 +650,17 @@ def api_generate_3d():
     if row and row["generation_count"] >= 1:
         return jsonify({
             "ok": False,
-            "error": "You have already generated a 3D model. Only one generation is allowed.",
+            "error": "You have already generated a 3D model. Chat with our consultant for more details.",
             "redirect": "/messages"
         }), 403
+
+    # Check if Hunyuan API is configured
+    if not config.HUNYUAN_API_KEY and not config.HUNYUAN_PROXY_URL:
+        return jsonify({
+            "ok": False,
+            "error": "3D generation service is not yet configured. Redirecting to chat...",
+            "redirect": "/messages"
+        }), 503
 
     image_file = request.files.get("image")
     description = (request.form.get("description") or "").strip()
@@ -687,14 +695,18 @@ def api_generate_3d():
         )
     except Exception as exc:
         traceback.print_exc(file=sys.stderr)
-        return jsonify({"ok": False, "error": f"Submit exception: {exc}"}), 500
+        return jsonify({
+            "ok": False,
+            "error": f"3D generation failed: {exc}",
+            "redirect": "/messages"
+        }), 502
 
     if not result:
-        return jsonify({"ok": False, "error": "Failed to submit 3D generation job."}), 502
+        return jsonify({"ok": False, "error": "Failed to submit 3D generation job.", "redirect": "/messages"}), 502
 
     job_id = (result.get("Response") or {}).get("JobId")
     if not job_id:
-        return jsonify({"ok": False, "error": "No job ID returned from API."}), 502
+        return jsonify({"ok": False, "error": "No job ID returned from API.", "redirect": "/messages"}), 502
 
     preview_url = url_for("uploaded_file", filename=filename, _external=True) if image_path else None
 
@@ -803,7 +815,8 @@ def api_task_status(task_id):
         result = {"status": "in_progress", "progress": 50}
     elif status in ("fail", "failed", "error"):
         result = {"status": "failed", "progress": 0,
-                  "error": resp.get("ErrorMessage", "Generation failed")}
+                  "error": resp.get("ErrorMessage", "Generation failed"),
+                  "redirect": "/messages"}
         cid = session.get("customer_id")
         if cid:
             with get_db() as conn:

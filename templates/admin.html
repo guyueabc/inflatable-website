@@ -565,22 +565,35 @@
         const content = input.value.trim();
         if (!currentCustomerId || (!content && !adminImagePath)) return;
 
+        const btn = document.querySelector('.btn-send-sm');
+        if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+
         const formData = new FormData();
         formData.append('customer_id', currentCustomerId);
         formData.append('content', content);
         if (adminImagePath) {
-            // When we have freshly uploaded image via /api/upload-chat-image
             formData.append('image_path', adminImagePath);
         }
 
-        await fetch('/api/admin/reply', {
-            method: 'POST',
-            body: formData
-        });
-        input.value = '';
-        removeAdminImg();
-        loadMessages();
-        loadCustomers();
+        try {
+            const res = await fetch('/api/admin/reply', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+            if (data.ok) {
+                input.value = '';
+                removeAdminImg();
+                loadMessages();
+                loadCustomers();
+            } else {
+                alert('Failed to send: ' + (data.error || 'Unknown error'));
+            }
+        } catch(e) {
+            alert('Failed to send message: ' + e.message);
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = '\u53d1\u9001'; }
+        }
     }
 
     // ── Admin image handling ──
@@ -590,7 +603,7 @@
         if (file.size > 10 * 1024 * 1024) { alert('Image too large. Max 10MB.'); input.value=''; return; }
         const fd = new FormData(); fd.append('image', file);
         try {
-            const res = await fetch('/api/upload-chat-image', {method:'POST', body:fd});
+            const res = await fetch('/api/admin/upload-chat-image', {method:'POST', body:fd});
             const data = await res.json();
             if (data.ok) {
                 adminImagePath = data.image_path;
@@ -810,22 +823,35 @@
         const content = input.value.trim();
         if (!currentCustomerId || (!content && !adminImagePath)) return;
 
+        const btn = document.querySelector('.btn-send-sm');
+        if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+
         const formData = new FormData();
         formData.append('customer_id', currentCustomerId);
         formData.append('content', content);
         if (adminImagePath) {
-            // When we have freshly uploaded image via /api/upload-chat-image
             formData.append('image_path', adminImagePath);
         }
 
-        await fetch('/api/admin/reply', {
-            method: 'POST',
-            body: formData
-        });
-        input.value = '';
-        removeAdminImg();
-        loadMessages();
-        loadCustomers();
+        try {
+            const res = await fetch('/api/admin/reply', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+            if (data.ok) {
+                input.value = '';
+                removeAdminImg();
+                loadMessages();
+                loadCustomers();
+            } else {
+                alert('Failed to send: ' + (data.error || 'Unknown error'));
+            }
+        } catch(e) {
+            alert('Failed to send message: ' + e.message);
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = '\u53d1\u9001'; }
+        }
     }
 
     // ── Admin image handling ──
@@ -835,7 +861,7 @@
         if (file.size > 10 * 1024 * 1024) { alert('Image too large. Max 10MB.'); input.value=''; return; }
         const fd = new FormData(); fd.append('image', file);
         try {
-            const res = await fetch('/api/upload-chat-image', {method:'POST', body:fd});
+            const res = await fetch('/api/admin/upload-chat-image', {method:'POST', body:fd});
             const data = await res.json();
             if (data.ok) {
                 adminImagePath = data.image_path;
@@ -1154,22 +1180,35 @@ function switchPeriod(p) {
         const content = input.value.trim();
         if (!currentCustomerId || (!content && !adminImagePath)) return;
 
+        const btn = document.querySelector('.btn-send-sm');
+        if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+
         const formData = new FormData();
         formData.append('customer_id', currentCustomerId);
         formData.append('content', content);
         if (adminImagePath) {
-            // When we have freshly uploaded image via /api/upload-chat-image
             formData.append('image_path', adminImagePath);
         }
 
-        await fetch('/api/admin/reply', {
-            method: 'POST',
-            body: formData
-        });
-        input.value = '';
-        removeAdminImg();
-        loadMessages();
-        loadCustomers();
+        try {
+            const res = await fetch('/api/admin/reply', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+            if (data.ok) {
+                input.value = '';
+                removeAdminImg();
+                loadMessages();
+                loadCustomers();
+            } else {
+                alert('Failed to send: ' + (data.error || 'Unknown error'));
+            }
+        } catch(e) {
+            alert('Failed to send message: ' + e.message);
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = '\u53d1\u9001'; }
+        }
     }
 
     // ── Admin image handling ──
@@ -1179,7 +1218,7 @@ function switchPeriod(p) {
         if (file.size > 10 * 1024 * 1024) { alert('Image too large. Max 10MB.'); input.value=''; return; }
         const fd = new FormData(); fd.append('image', file);
         try {
-            const res = await fetch('/api/upload-chat-image', {method:'POST', body:fd});
+            const res = await fetch('/api/admin/upload-chat-image', {method:'POST', body:fd});
             const data = await res.json();
             if (data.ok) {
                 adminImagePath = data.image_path;
