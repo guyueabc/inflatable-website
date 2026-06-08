@@ -301,7 +301,11 @@
         </div>
     </div>
 
-<script>
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
     const modelUrl = "{{ task.result_url or '' }}";
     let countdown = 10;
     let countdownTimer = null;
@@ -325,6 +329,7 @@
         clearInterval(countdownTimer);
         barEl.innerHTML = '<span style="color:var(--text-secondary);">Countdown cancelled. <a href="/messages" style="color:var(--primary);">Go to chat</a> when ready.</span>';
     }
+    window.cancelCountdown = cancelCountdown;
 
     countdownTimer = setInterval(tick, 1000);
 
@@ -343,6 +348,7 @@
         // Resize renderer to fill viewport
         resizeRenderer();
     }
+    window.enterFullscreen = enterFullscreen;
 
     function exitFullscreen() {
         if (!isFullscreen) return;
@@ -352,6 +358,7 @@
         document.body.classList.remove('fullscreen-active');
         resizeRenderer();
     }
+    window.exitFullscreen = exitFullscreen;
 
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && isFullscreen) {
@@ -383,7 +390,7 @@
         renderer.setSize(viewerEl.clientWidth, viewerEl.clientHeight);
         viewerEl.appendChild(renderer.domElement);
 
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.08;
         camera.position.set(2, 2, 2);
@@ -398,7 +405,7 @@
         dirLight2.position.set(-3, 2, -5);
         scene.add(dirLight2);
 
-        const loader = new THREE.GLTFLoader();
+        const loader = new GLTFLoader();
         loader.load(modelUrl, (gltf) => {
             scene.add(gltf.scene);
             const box = new THREE.Box3().setFromObject(gltf.scene);

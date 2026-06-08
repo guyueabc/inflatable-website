@@ -670,6 +670,7 @@ def api_generate_3d():
 
     image_path = None
     image_base64 = None
+    filename = None  # Initialize to prevent NameError on text-only submissions
 
     if image_file and image_file.filename:
         if not allowed_image(image_file.filename):
@@ -708,7 +709,7 @@ def api_generate_3d():
     if not job_id:
         return jsonify({"ok": False, "error": "No job ID returned from API.", "redirect": "/messages"}), 502
 
-    preview_url = url_for("uploaded_file", filename=filename, _external=True) if image_path else None
+    preview_url = url_for("uploaded_file", filename=filename, _external=True) if (image_path and filename) else None
 
     # Record generation task
     with get_db() as conn:
@@ -994,6 +995,11 @@ def api_get_messages():
         pass
 
     with get_db() as conn:
+        # Mark admin/system messages as read when customer views them
+        conn.execute(
+            "UPDATE messages SET is_read=1 WHERE customer_id=? AND sender IN ('admin','system') AND is_read=0",
+            (cid,),
+        )
         rows = conn.execute(
             "SELECT id, sender, content, image_path, created_at, is_read FROM messages "
             "WHERE customer_id=? ORDER BY created_at ASC",

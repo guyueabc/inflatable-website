@@ -105,7 +105,7 @@ def api_traffic_summary():
         pv_yest, uv_yest = _pv_uv_for_range(yesterday.strftime("%Y-%m-%d"), yesterday.strftime("%Y-%m-%d"))
         pv_lw, uv_lw = _pv_uv_for_range(last_week.strftime("%Y-%m-%d"), last_week.strftime("%Y-%m-%d"))
         daily = _daily_pv_for_range((ref - timedelta(days=6)).strftime("%Y-%m-%d"), today_str)
-        return jsonify({"period":"day","date":today_str,"pv":pv,"uv":uv,"pv_yesterday":pv_yest,"uv_yesterday":uv_yest,"pv_week_ago":pv_lw,"uv_week_ago":uv_lw,"pv_dod":_calc_growth(pv,pv_yest),"uv_dod":_calc_growth(uv,uv_yest),"daily":daily,"page_distribution":_page_distribution(today_str,today_str),"total_all":_pv_uv_for_range("2000-01-01","2099-12-31")[0]})
+        return jsonify({"ok":True,"period":"day","date":today_str,"pv":pv,"uv":uv,"pv_yesterday":pv_yest,"uv_yesterday":uv_yest,"pv_week_ago":pv_lw,"uv_week_ago":uv_lw,"pv_dod":_calc_growth(pv,pv_yest),"uv_dod":_calc_growth(uv,uv_yest),"daily":daily,"page_distribution":_page_distribution(today_str,today_str),"total_all":_pv_uv_for_range("2000-01-01","2099-12-31")[0]})
 
     elif period == "week":
         monday = ref - timedelta(days=ref.weekday())
@@ -116,7 +116,7 @@ def api_traffic_summary():
         pv, uv = _pv_uv_for_range(week_start, week_end)
         pv_last, uv_last = _pv_uv_for_range(last_monday.strftime("%Y-%m-%d"), last_sunday.strftime("%Y-%m-%d"))
         daily = _daily_pv_for_range(week_start, week_end)
-        return jsonify({"period":"week","date_range":f"{week_start} ~ {week_end}","pv":pv,"uv":uv,"pv_last_week":pv_last,"uv_last_week":uv_last,"pv_wow":_calc_growth(pv,pv_last),"uv_wow":_calc_growth(uv,uv_last),"daily":daily,"page_distribution":_page_distribution(week_start,week_end),"total_all":_pv_uv_for_range("2000-01-01","2099-12-31")[0]})
+        return jsonify({"ok":True,"period":"week","date_range":f"{week_start} ~ {week_end}","pv":pv,"uv":uv,"pv_last_week":pv_last,"uv_last_week":uv_last,"pv_wow":_calc_growth(pv,pv_last),"uv_wow":_calc_growth(uv,uv_last),"daily":daily,"page_distribution":_page_distribution(week_start,week_end),"total_all":_pv_uv_for_range("2000-01-01","2099-12-31")[0]})
 
     elif period == "month":
         month_start = ref.replace(day=1).strftime("%Y-%m-%d")
@@ -127,7 +127,7 @@ def api_traffic_summary():
         pv, uv = _pv_uv_for_range(month_start, month_end)
         pv_last, uv_last = _pv_uv_for_range(last_month_start, last_month_end)
         daily = _daily_pv_for_range(month_start, month_end)
-        return jsonify({"period":"month","date_range":f"{month_start} ~ {month_end}","pv":pv,"uv":uv,"pv_last_month":pv_last,"uv_last_month":uv_last,"pv_mom":_calc_growth(pv,pv_last),"uv_mom":_calc_growth(uv,uv_last),"daily":daily,"page_distribution":_page_distribution(month_start,month_end),"total_all":_pv_uv_for_range("2000-01-01","2099-12-31")[0]})
+        return jsonify({"ok":True,"period":"month","date_range":f"{month_start} ~ {month_end}","pv":pv,"uv":uv,"pv_last_month":pv_last,"uv_last_month":uv_last,"pv_mom":_calc_growth(pv,pv_last),"uv_mom":_calc_growth(uv,uv_last),"daily":daily,"page_distribution":_page_distribution(month_start,month_end),"total_all":_pv_uv_for_range("2000-01-01","2099-12-31")[0]})
 
     elif period == "year":
         year_start = ref.replace(month=1,day=1).strftime("%Y-%m-%d")
@@ -137,7 +137,7 @@ def api_traffic_summary():
         pv, uv = _pv_uv_for_range(year_start, year_end)
         pv_last, uv_last = _pv_uv_for_range(last_year_start, last_year_end)
         monthly = _monthly_pv_for_range(year_start, year_end)
-        return jsonify({"period":"year","date_range":f"{year_start} ~ {year_end}","pv":pv,"uv":uv,"pv_last_year":pv_last,"uv_last_year":uv_last,"pv_yoy":_calc_growth(pv,pv_last),"uv_yoy":_calc_growth(uv,uv_last),"monthly":monthly,"page_distribution":_page_distribution(year_start,year_end),"total_all":_pv_uv_for_range("2000-01-01","2099-12-31")[0]})
+        return jsonify({"ok":True,"period":"year","date_range":f"{year_start} ~ {year_end}","pv":pv,"uv":uv,"pv_last_year":pv_last,"uv_last_year":uv_last,"pv_yoy":_calc_growth(pv,pv_last),"uv_yoy":_calc_growth(uv,uv_last),"monthly":monthly,"page_distribution":_page_distribution(year_start,year_end),"total_all":_pv_uv_for_range("2000-01-01","2099-12-31")[0]})
 
     return jsonify({"ok":False,"error":"无效的时间范围"}), 400
 

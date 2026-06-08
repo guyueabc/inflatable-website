@@ -46,4 +46,4 @@ MAIL_DEFAULT_SENDER = os.getenv(
 )
 
 # ── Admin ───────────────────────────────────────────────────────────────────
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "InflatableModel2024!Secure")

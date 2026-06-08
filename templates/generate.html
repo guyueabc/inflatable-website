@@ -270,7 +270,15 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+        // Make THREE available globally for non-module code if needed
+        window.THREE = THREE;
+        window.OrbitControls = OrbitControls;
+        window.GLTFLoader = GLTFLoader;
         const uploadZone = document.getElementById('uploadZone');
         const fileInput = document.getElementById('fileInput');
         const previewContainer = document.getElementById('previewContainer');
@@ -315,6 +323,7 @@
             previewContainer.style.display = 'none';
             uploadZone.style.display = 'flex';
         }
+        window.removeImage = removeImage;
 
         function formatTime(sec) {
             const m = String(Math.floor(sec / 60)).padStart(2, '0');
@@ -389,6 +398,7 @@
                 generateBtn.disabled = false;
             }
         }
+        window.submitGenerate = submitGenerate;
 
         async function pollTask(taskId) {
             const pollStartTime = Date.now();
@@ -468,7 +478,7 @@
                 viewerEl.innerHTML = '';
                 viewerEl.appendChild(renderer.domElement);
 
-                const controls = new THREE.OrbitControls(camera, renderer.domElement);
+                const controls = new OrbitControls(camera, renderer.domElement);
                 controls.enableDamping = true;
                 controls.dampingFactor = 0.08;
                 camera.position.set(2, 2, 2);
@@ -483,7 +493,7 @@
                 dirLight2.position.set(-3, 2, -5);
                 scene.add(dirLight2);
 
-                const loader = new THREE.GLTFLoader();
+                const loader = new GLTFLoader();
                 loader.load(modelUrl, (gltf) => {
                     scene.add(gltf.scene);
                     const box = new THREE.Box3().setFromObject(gltf.scene);
@@ -537,6 +547,7 @@
             removeImage();
             document.getElementById('description').value = '';
         }
+        window.resetGenerate = resetGenerate;
 
         // Auto-restore result panel when returning from messages with ?task_id=
         (function() {

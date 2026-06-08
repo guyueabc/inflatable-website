@@ -481,7 +481,11 @@
             const avatar = m.sender === 'customer' ? 'Y' : 'M';
             const content = (m.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
             const imgHtml = hasImage
-                ? '<img class="msg-img" src="' + (m.image_path || '').replace(/"/g, '&quot;') + '" onclick="event.stopPropagation();openLightbox(\'' + (m.image_path || '').replace(/"/g, '&quot;') + '\')" loading="lazy">'
+                ? (function() {
+                    var safeSrc = (m.image_path || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                    var safePath = (m.image_path || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                    return '<img class="msg-img" src="' + safeSrc + '" onclick="event.stopPropagation();openLightbox(\'' + safePath + '\')" loading="lazy">';
+                  })()
                 : '';
             return '<div class="msg-row ' + senderClass + '">' +
                 '<div class="msg-avatar">' + avatar + '</div>' +

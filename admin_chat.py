@@ -7,6 +7,7 @@ import uuid
 import secrets
 import os
 import sqlite3
+import time
 from datetime import datetime, timedelta
 
 import requests
@@ -15,6 +16,11 @@ from flask import Blueprint, jsonify, request, session, send_from_directory
 import config
 
 chat_bp = Blueprint("admin_chat", __name__, url_prefix="/api/admin")
+
+# ── Login rate limiting (in-memory, per IP) ──
+_login_attempts = {}  # ip -> {"count": int, "last_attempt": float}
+_MAX_LOGIN_ATTEMPTS = 5
+_LOGIN_LOCKOUT_SEC = 300  # 5 minutes
 
 # ── Database helpers (reuse main DB) ──
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -85,12 +91,32 @@ def admin_required(f):
 
 @chat_bp.route("/login", methods=["POST"])
 def admin_login():
-    """管理员登录"""
+    """管理员登录（含失败次数限制）"""
+    ip = request.remote_addr or "unknown"
+    now = time.time()
+
+    # Check rate limit
+    attempt = _login_attempts.get(ip)
+    if attempt and attempt["count"] >= _MAX_LOGIN_ATTEMPTS:
+        if now - attempt["last_attempt"] < _LOGIN_LOCKOUT_SEC:
+            remaining = int(_LOGIN_LOCKOUT_SEC - (now - attempt["last_attempt"]))
+            return jsonify({"ok": False, "error": f"登录失败次数过多，请 {remaining} 秒后重试"}), 429
+        else:
+            _login_attempts.pop(ip, None)
+
     data = request.get_json(force=True, silent=True) or {}
     password = (data.get("password") or "").strip()
     if password == config.ADMIN_PASSWORD:
+        _login_attempts.pop(ip, None)
         session["admin_logged_in"] = True
         return jsonify({"ok": True})
+
+    # Record failed attempt
+    if ip not in _login_attempts:
+        _login_attempts[ip] = {"count": 0, "last_attempt": now}
+    _login_attempts[ip]["count"] += 1
+    _login_attempts[ip]["last_attempt"] = now
+
     return jsonify({"ok": False, "error": "密码错误"}), 401
 
 
