@@ -42,7 +42,7 @@ MAIL_USERNAME = os.getenv("MAIL_USERNAME", "dulizhan@showlovein.com")
 MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "")
 MAIL_DEFAULT_SENDER = os.getenv(
     "MAIL_DEFAULT_SENDER",
-    "InflatableModel.CN <noreply@inflatablemodel.cn>",
+    "InflatableModel <dulizhan@showlovein.com>",
 )
 
 # ── Admin ───────────────────────────────────────────────────────────────────
