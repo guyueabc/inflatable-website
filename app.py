@@ -183,7 +183,12 @@ CREATE TABLE IF NOT EXISTS customers (
                 pass
 
 
-init_db()
+try:
+    init_db()
+except Exception as e:
+    import sys, traceback
+    print(f"init_db failed: {e}", file=sys.stderr)
+    traceback.print_exc()
 
 # 鈹€鈹€ In-memory stores 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 verification_codes: dict[str, dict] = {}
