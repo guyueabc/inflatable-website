@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Messages — InflatableModel.CN</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <style>
         :root {
             --bg: #0f172a;
@@ -205,12 +206,27 @@
         @media (max-width: 640px) {
             .msg-row { max-width: 90%; }
         }
-    
-        /* Models sidebar */
-        .messages-layout { display: flex; flex: 1; min-height: 0; max-width: 1200px; margin: 0 auto; width: 100%; }        @media (max-width: 768px) { .models-sidebar { display: none; } .chat-wrapper { margin-left: 0; padding: 0 12px; } }
 
+        /* Download button */
+        .msg-bubble { position: relative; }
+        .msg-download-btn {
+            position: absolute; top: 6px; right: 6px;
+            width: 28px; height: 28px;
+            background: rgba(0,0,0,0.55); color: #fff;
+            border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            text-decoration: none; font-size: 14px; font-weight: 700;
+            opacity: 0; transition: opacity 0.2s; z-index: 5;
+        }
+        .msg-bubble:hover .msg-download-btn { opacity: 1; }
+        .msg-download-btn:hover { background: var(--primary, #6366f1); }
+
+        /* Models sidebar */
+        .messages-layout { display: flex; flex: 1; min-height: 0; max-width: 1200px; margin: 0 auto; width: 100%; }
+        @media (max-width: 768px) { .models-sidebar { display: none; } .chat-wrapper { margin-left: 0; padding: 0 12px; } }
         .model-list::-webkit-scrollbar { width: 4px; }
         .model-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    </style>
 
         .page-layout {
             display: flex;
@@ -417,7 +433,7 @@
             <div class="chat-avatar">M</div>
             <div class="chat-header-info">
                 <h2>Mia — Your Consultant</h2>
-                <span>Online · InflatableModel.CN</span>
+                <span id="chatStatus" style="color:#10b981;">● Connected</span>
             </div>
             <a id="backToPreview" href="/generate" style="display:none;margin-left:auto;padding:6px 12px;border-radius:8px;border:1px solid var(--border);color:var(--text-secondary);font-size:.8125rem;text-decoration:none;white-space:nowrap;transition:.2s;">
                 &larr; Back to Preview
@@ -452,10 +468,27 @@
 
 
 <script>
-    console.log("[DEBUG] messages.js loaded");
-    console.log("[DEBUG] msgInput exists:", !!document.getElementById("msgInput"));
+    console.log("[DEBUG] messages.js loaded (Socket.IO)");
     let msgs = [];
     let pendingImagePath = '';
+
+    // ── Socket.IO real-time chat ──
+    const socket = io({ transports: ["websocket", "polling"] });
+
+    socket.on("connect", () => {
+        console.log("[Chat] Connected via Socket.IO");
+        loadMsgs();  // Load history once on connect
+    });
+
+    socket.on("disconnect", () => {
+        const statusEl = document.getElementById("chatStatus");
+        if (statusEl) { statusEl.textContent = "Reconnecting..."; statusEl.style.color = "#f59e0b"; }
+    });
+
+    socket.on("new_message", (msg) => {
+        appendMessage(msg);
+        scrollToBottom();
+    });
 
     async function loadMsgs() {
         try {
@@ -473,67 +506,94 @@
             el.innerHTML = '<div class="empty-chat">No messages yet. Start the conversation!</div>';
             return;
         }
-        const wasAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-        el.innerHTML = msgs.map(m => {
-            const hasImage = m.image_path && m.image_path.trim() !== '';
-            const senderClass = m.sender === 'customer' ? 'customer' :
-                               (m.sender === 'system' ? 'system' : 'admin');
-            const avatar = m.sender === 'customer' ? 'Y' : 'M';
-            const content = (m.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
-            const imgHtml = hasImage
-                ? (function() {
-                    var safeSrc = (m.image_path || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-                    var safePath = (m.image_path || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-                    return '<img class="msg-img" src="' + safeSrc + '" onclick="event.stopPropagation();openLightbox(\'' + safePath + '\')" loading="lazy">';
-                  })()
-                : '';
-            return '<div class="msg-row ' + senderClass + '">' +
-                '<div class="msg-avatar">' + avatar + '</div>' +
-                '<div class="msg-bubble">' +
-                '<div>' + content + imgHtml + '</div>' +
-                '<div class="msg-time">' + fmtTime(m.created_at) + '</div>' +
-                '</div></div>';
-        }).join('');
-        if (wasAtBottom) el.scrollTop = el.scrollHeight;
+        el.innerHTML = '';
+        msgs.forEach(m => appendMessage(m, false));
+        scrollToBottom();
+    }
+
+    function appendMessage(m, scroll = true) {
+        const el = document.getElementById('chatMessages');
+        const hasImage = m.image_path && m.image_path.trim() !== '';
+        const senderClass = m.sender === 'customer' ? 'customer' :
+                           (m.sender === 'system' ? 'system' : 'admin');
+        const avatar = m.sender === 'customer' ? 'Y' : 'M';
+        const content = (m.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+
+        const row = document.createElement('div');
+        row.className = 'msg-row ' + senderClass;
+
+        const av = document.createElement('div');
+        av.className = 'msg-avatar';
+        av.textContent = avatar;
+        row.appendChild(av);
+
+        const bubble = document.createElement('div');
+        bubble.className = 'msg-bubble';
+
+        const textDiv = document.createElement('div');
+        textDiv.innerHTML = content;
+        bubble.appendChild(textDiv);
+
+        if (hasImage) {
+            const img = document.createElement('img');
+            img.className = 'msg-img';
+            img.src = m.image_path;
+            img.onclick = () => openLightbox(m.image_path);
+            img.loading = 'lazy';
+            bubble.appendChild(img);
+
+            // Download button
+            const downloadBtn = document.createElement('a');
+            downloadBtn.href = '/api/download' + m.image_path;
+            downloadBtn.download = (m.image_path || '').split('/').pop() || 'image';
+            downloadBtn.className = 'msg-download-btn';
+            downloadBtn.title = 'Download';
+            downloadBtn.textContent = '⤓';
+            bubble.appendChild(downloadBtn);
+        }
+
+        const timeDiv = document.createElement('div');
+        timeDiv.className = 'msg-time';
+        timeDiv.textContent = fmtTime(m.created_at);
+        bubble.appendChild(timeDiv);
+
+        row.appendChild(bubble);
+        el.appendChild(row);
+
+        if (scroll) scrollToBottom();
+    }
+
+    function scrollToBottom() {
+        const el = document.getElementById('chatMessages');
+        el.scrollTop = el.scrollHeight;
     }
 
     async function sendMsg() {
         const input = document.getElementById('msgInput');
         const content = input.value.trim();
-        if (!content && !pendingImagePath) return;
 
-        const btn = document.querySelector('.btn-send');
-        btn.disabled = true;
-        btn.textContent = 'Sending...';
-
-        try {
-            const body = JSON.stringify({
-                content: content,
-                image_path: pendingImagePath || ''
-            });
-
-            const res = await fetch('/api/messages', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: body
-            });
-            const data = await res.json();
-            if (data.ok) {
-                input.value = '';
-                input.style.height = 'auto';
-                removeImage();
-                await loadMsgs();
-                const el = document.getElementById('chatMessages');
-                el.scrollTop = el.scrollHeight;
-            } else {
-                alert('Failed to send: ' + (data.error || 'Unknown error'));
-            }
-        } catch(e) {
-            alert('Failed to send message: ' + e.message);
-        } finally {
-            btn.disabled = false;
-            btn.textContent = 'Send';
+        const imageInput = document.getElementById('imageInput');
+        let imagePath = pendingImagePath || '';
+        if (imageInput && imageInput.files.length > 0) {
+            const formData = new FormData();
+            formData.append('image', imageInput.files[0]);
+            try {
+                const uploadRes = await fetch('/api/upload-chat-image', {
+                    method: 'POST', body: formData,
+                });
+                const uploadData = await uploadRes.json();
+                if (uploadData.ok) imagePath = uploadData.image_path;
+            } catch (e) { console.error('Image upload failed:', e); }
+            imageInput.value = '';
+            removeImage();
         }
+
+        if (!content && !imagePath) return;
+
+        socket.emit("send_message", { content, image_path: imagePath });
+        input.value = '';
+        input.style.height = 'auto';
+        removeImage();
     }
 
     async function handleImageUpload(input) {
@@ -619,7 +679,7 @@
     });
 
     loadMsgs();
-    setInterval(loadMsgs, 3000);
+    // ❌ setInterval polling removed — Socket.IO handles real-time messages
 
     // Auto-resize textarea
     document.getElementById('msgInput').addEventListener('input', function() {

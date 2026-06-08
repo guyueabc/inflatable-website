@@ -427,13 +427,13 @@
 
                     } else if (data.status === 'fail' || data.status === 'failed') {
                         stopTimer();
-                        statusText.textContent = data.error || 'Generation failed. Redirecting to chat...';
-                        setTimeout(() => { window.location.href = '/messages'; }, 2000);
+                        statusText.textContent = 'Generation failed. Your image has been sent to our support team. Redirecting to chat...';
+                        setTimeout(() => { window.location.href = '/messages'; }, 2500);
 
                     } else if (data.status === 'error') {
                         stopTimer();
-                        statusText.textContent = data.error || 'API error. Redirecting to chat...';
-                        setTimeout(() => { window.location.href = '/messages'; }, 2000);
+                        statusText.textContent = 'Generation failed. Redirecting to chat for support...';
+                        setTimeout(() => { window.location.href = '/messages'; }, 2500);
 
                     } else {
                         if (data.progress >= 50) {

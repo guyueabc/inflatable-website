@@ -34,6 +34,8 @@ except ImportError:
     Session = None
     HAS_FLASK_SESSION = False
 
+from flask_socketio import SocketIO, emit, join_room, leave_room
+
 import config
 import mailer
 
@@ -48,6 +50,9 @@ if Session is not None:
     Session(app)
 app.jinja_env.auto_reload = True
 app.config['TEMPLATES_AUTO_RELOAD'] = True
+
+# Socket.IO — real-time messaging
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet", manage_session=False)
 
 # Register admin blueprints
 app.register_blueprint(chat_bp)
@@ -229,23 +234,32 @@ def is_logged_in() -> bool:
 
 @app.before_request
 def auto_login_from_token():
-    """Restore session from persistent auto-login cookie (30-day validity)."""
+    """Restore session from persistent auto-login cookie (30-day validity + IP memory)."""
     if session.get("verified") and session.get("customer_id"):
         return
     token = request.cookies.get("auto_login")
     if not token:
         return
+
+    client_ip = request.headers.get("CF-Connecting-IP", request.remote_addr)
+    ip_prefix = ".".join(client_ip.split(".")[:3]) if client_ip else ""
+
     with get_db() as conn:
         row = conn.execute(
-            "SELECT id, email, name FROM customers WHERE persistent_token=? AND token_expires > datetime('now','localtime')",
+            "SELECT id, email, name, last_ip FROM customers WHERE persistent_token=? AND token_expires > datetime('now','localtime')",
             (token,),
         ).fetchone()
     if row:
-        session["customer_id"] = row["id"]
-        session["contact_email"] = row["email"]
-        session["contact_name"] = row["name"]
-        session["verified"] = True
-        verified_sessions.add(_session_id())
+        stored_ip = row["last_ip"] or ""
+        stored_prefix = ".".join(stored_ip.split(".")[:3]) if stored_ip else ""
+
+        # IP prefix match or exact match -> allow auto-login
+        if ip_prefix == stored_prefix or client_ip == stored_ip:
+            session["customer_id"] = row["id"]
+            session["contact_email"] = row["email"]
+            session["contact_name"] = row["name"]
+            session["verified"] = True
+            verified_sessions.add(_session_id())
 
 
 @app.before_request
@@ -334,6 +348,10 @@ def api_login():
         return jsonify({"ok": False, "error": "Email is required."}), 400
     if "@" not in email or "." not in email.split("@")[-1]:
         return jsonify({"ok": False, "error": "Please enter a valid email address."}), 400
+    if not phone:
+        return jsonify({"ok": False, "error": "Phone number is required."}), 400
+    if not re.match(r"^\+?[\d\s\-\(\)]{7,20}$", phone):
+        return jsonify({"ok": False, "error": "Please enter a valid phone number (e.g. +86 13800138000)."}), 400
     if not name:
         name = email.split("@")[0]
 
@@ -379,7 +397,11 @@ def api_login():
         "last_code_sent": datetime.utcnow(),
     }
 
-    sent, smtp_error = mailer.send_verification_code(email, code)
+    # Generate magic link token for one-click login
+    magic_token = generate_magic_token(customer_id if existing is None else existing["id"])
+    magic_link = url_for("magic_login", token=magic_token, email=email, _external=True)
+
+    sent, smtp_error = mailer.send_verification_code(email, code, magic_link=magic_link)
     smtp_configured = bool(config.MAIL_USERNAME and config.MAIL_PASSWORD)
     dev_code = None if smtp_configured else code
     if not sent:
@@ -517,13 +539,14 @@ def api_verify():
     cid = session.get("customer_id")
     email = session.get("contact_email", "")
     if cid:
+        client_ip = request.headers.get("CF-Connecting-IP", request.remote_addr)
         # Generate persistent auto-login token (30 days)
         persistent_token = uuid.uuid4().hex + secrets.token_hex(16)
         expires = (datetime.utcnow() + timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S")
         with get_db() as conn:
             conn.execute(
-                "UPDATE customers SET verified=1, persistent_token=?, token_expires=? WHERE id=?",
-                (persistent_token, expires, cid),
+                "UPDATE customers SET verified=1, persistent_token=?, token_expires=?, last_ip=? WHERE id=?",
+                (persistent_token, expires, client_ip, cid),
             )
         resp = make_response(jsonify({"ok": True, "message": "Email verified successfully."}))
         resp.set_cookie("auto_login", persistent_token, max_age=30 * 24 * 3600, httponly=True, samesite="Lax")
@@ -852,6 +875,13 @@ def api_task_status(task_id):
         cid = session.get("customer_id")
         if cid:
             with get_db() as conn:
+                # Get input image for auto-notification
+                task_row = conn.execute(
+                    "SELECT input_image_path FROM generation_tasks WHERE job_id=?",
+                    (task_id,),
+                ).fetchone()
+                input_image = task_row["input_image_path"] if task_row else ""
+
                 conn.execute(
                     "UPDATE generation_tasks SET status='failed', error_message=?, completed_at=datetime('now','localtime') WHERE job_id=?",
                     (resp.get("ErrorMessage", "Generation failed"), task_id),
@@ -861,6 +891,39 @@ def api_task_status(task_id):
                     "UPDATE customers SET generation_count=0, generation_status='failed' WHERE id=?",
                     (cid,),
                 )
+
+                # Auto system message: 3D generation failed -> notify both user and admin
+                error_msg = resp.get("ErrorMessage", "Unknown error")
+                customer_name = session.get("contact_name", "Unknown")
+                customer_email = session.get("contact_email", "")
+
+                # 1) Notify user
+                conn.execute(
+                    "INSERT INTO messages (customer_id, sender, content, image_path) VALUES (?, 'system', ?, ?)",
+                    (cid,
+                     f"Your 3D model generation (task #{task_id[:8]}) has failed. Our support team has been notified with your reference image and will respond shortly.",
+                     input_image),
+                )
+
+                # 2) Notify admin with details
+                conn.execute(
+                    "INSERT INTO messages (customer_id, sender, content, image_path) VALUES (?, 'system', ?, ?)",
+                    (cid,
+                     f"[AUTO] 3D generation FAILED\nCustomer: {customer_name} ({customer_email})\nTask ID: {task_id}\nError: {error_msg}",
+                     input_image),
+                )
+
+                # 3) Try Socket.IO push to admin
+                try:
+                    socketio.emit("new_message", {
+                        "sender": "system",
+                        "content": f"[AUTO] 3D generation FAILED for {customer_name}, image attached",
+                        "image_path": input_image,
+                        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "customer_id": cid,
+                    }, room="admin_room")
+                except Exception:
+                    pass
     else:
         result = {"status": status, "progress": 0}
 
@@ -1197,8 +1260,223 @@ def api_my_models():
 
     return jsonify({"ok": True, "models": models})
 
+# ═══════ Socket.IO Chat Events (Requirements 1) ═══════
+
+@socketio.on("connect")
+def on_connect():
+    """User/admin connects: join appropriate room"""
+    cid = session.get("customer_id")
+    if cid:
+        join_room(f"customer_{cid}")
+    if session.get("admin_logged_in"):
+        join_room("admin_room")
+
+
+@socketio.on("disconnect")
+def on_disconnect():
+    cid = session.get("customer_id")
+    if cid:
+        leave_room(f"customer_{cid}")
+    if session.get("admin_logged_in"):
+        leave_room("admin_room")
+
+
+@socketio.on("send_message")
+def on_send_message(data):
+    """User or admin sends a message, broadcast to both sides"""
+    cid = session.get("customer_id")
+    is_admin = session.get("admin_logged_in")
+
+    if not cid and not is_admin:
+        return
+
+    content = (data.get("content") or "").strip()
+    image_path = (data.get("image_path") or "").strip()
+
+    if not content and not image_path:
+        return
+
+    if is_admin:
+        cid = (data.get("customer_id") or "").strip()
+        if not cid:
+            return
+        sender = "admin"
+    else:
+        sender = "customer"
+
+    with get_db() as conn:
+        conn.execute(
+            "INSERT INTO messages (customer_id, sender, content, image_path) VALUES (?, ?, ?, ?)",
+            (cid, sender, content, image_path),
+        )
+
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT created_at FROM messages WHERE customer_id=? ORDER BY id DESC LIMIT 1",
+            (cid,),
+        ).fetchone()
+
+    msg_data = {
+        "sender": sender,
+        "content": content,
+        "image_path": image_path,
+        "created_at": row["created_at"] if row else "",
+    }
+
+    emit("new_message", msg_data, room=f"customer_{cid}")
+    emit("new_message", dict(msg_data, customer_id=cid), room="admin_room")
+
+
+# ═══════ Magic Link (Requirement 2) ═══════
+
+def generate_magic_token(customer_id: str) -> str:
+    """Generate 24h magic link token"""
+    token = secrets.token_urlsafe(32)
+    expires = (datetime.utcnow() + timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE customers SET magic_token=?, magic_token_expires=? WHERE id=?",
+            (token, expires, customer_id),
+        )
+    return token
+
+
+@app.route("/api/magic-login")
+def magic_login():
+    token = request.args.get("token", "")
+    email = request.args.get("email", "").lower()
+    if not token or not email:
+        return redirect("/login?error=invalid_magic_link")
+
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT id, name FROM customers WHERE email=? AND magic_token=? AND magic_token_expires > datetime('now','localtime')",
+            (email, token),
+        ).fetchone()
+
+    if not row:
+        return redirect("/login?error=expired_magic_link")
+
+    conn.execute("UPDATE customers SET magic_token='', magic_token_expires='' WHERE id=?", (row["id"],))
+
+    session["customer_id"] = row["id"]
+    session["contact_email"] = email
+    session["contact_name"] = row["name"] or email.split("@")[0]
+    session["verified"] = True
+    verified_sessions.add(_session_id())
+
+    persistent_token = uuid.uuid4().hex + secrets.token_hex(16)
+    expires_db = (datetime.utcnow() + timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S")
+    client_ip = request.headers.get("CF-Connecting-IP", request.remote_addr)
+    conn.execute(
+        "UPDATE customers SET persistent_token=?, token_expires=?, last_ip=? WHERE id=?",
+        (persistent_token, expires_db, client_ip, row["id"]),
+    )
+
+    resp = make_response(redirect("/generate"))
+    resp.set_cookie("auto_login", persistent_token, max_age=30 * 24 * 3600, httponly=True, samesite="Lax")
+    return resp
+
+
+# ═══════ Google OAuth (Requirement 5) ═══════
+
+google_oauth = None
+if os.getenv("GOOGLE_CLIENT_ID") and os.getenv("GOOGLE_CLIENT_SECRET"):
+    try:
+        from authlib.integrations.flask_client import OAuth
+        oauth = OAuth(app)
+        google_oauth = oauth.register(
+            name="google",
+            client_id=os.getenv("GOOGLE_CLIENT_ID", ""),
+            client_secret=os.getenv("GOOGLE_CLIENT_SECRET", ""),
+            access_token_url="https://accounts.google.com/o/oauth2/token",
+            authorize_url="https://accounts.google.com/o/oauth2/auth",
+            api_base_url="https://www.googleapis.com/oauth2/v1/",
+            client_kwargs={"scope": "openid email profile"},
+            server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+        )
+    except Exception:
+        pass
+
+
+@app.route("/api/auth/google")
+def google_login():
+    if not google_oauth:
+        return jsonify({"ok": False, "error": "Google OAuth not configured"}), 400
+    redirect_uri = url_for("google_callback", _external=True)
+    return google_oauth.authorize_redirect(redirect_uri)
+
+
+@app.route("/api/auth/google/callback")
+def google_callback():
+    if not google_oauth:
+        return redirect("/login?error=google_not_configured")
+    try:
+        token = google_oauth.authorize_access_token()
+        user_info = google_oauth.get("userinfo").json()
+    except Exception:
+        return redirect("/login?error=google_auth_failed")
+
+    email = (user_info.get("email") or "").lower()
+    name = user_info.get("name") or ""
+    google_id = user_info.get("id") or ""
+
+    if not email:
+        return redirect("/login?error=google_no_email")
+
+    with get_db() as conn:
+        existing = conn.execute("SELECT id FROM customers WHERE email=?", (email,)).fetchone()
+        if existing:
+            conn.execute(
+                "UPDATE customers SET google_id=?, name=?, last_active_at=datetime('now','localtime') WHERE id=?",
+                (google_id, name, existing["id"]),
+            )
+            cid = existing["id"]
+        else:
+            cid = email.replace("@", "_at_").replace(".", "_")
+            conn.execute(
+                "INSERT INTO customers (id, name, email, google_id, verified) VALUES (?, ?, ?, ?, 1)",
+                (cid, name, email, google_id),
+            )
+
+    session["customer_id"] = cid
+    session["contact_email"] = email
+    session["contact_name"] = name
+    session["verified"] = True
+    verified_sessions.add(_session_id())
+
+    persistent_token = uuid.uuid4().hex + secrets.token_hex(16)
+    expires = (datetime.utcnow() + timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S")
+    client_ip = request.headers.get("CF-Connecting-IP", request.remote_addr)
+    conn.execute(
+        "UPDATE customers SET persistent_token=?, token_expires=?, last_ip=? WHERE id=?",
+        (persistent_token, expires, client_ip, cid),
+    )
+
+    resp = make_response(redirect("/generate"))
+    resp.set_cookie("auto_login", persistent_token, max_age=30 * 24 * 3600, httponly=True, samesite="Lax")
+    return resp
+
+
+# ═══════ Download Routes (Requirement 7) ═══════
+
+@app.route("/api/download/uploads/<path:filename>")
+def api_download(filename):
+    return send_from_directory(UPLOAD_DIR, filename, as_attachment=True)
+
+
+@app.route("/api/download/uploads/chat/<path:filename>")
+def api_download_chat(filename):
+    return send_from_directory(CHAT_UPLOAD_DIR, filename, as_attachment=True)
+
+
+@app.route("/api/download/uploads/models/<path:filename>")
+def api_download_model(filename):
+    return send_from_directory(MODELS_DIR, filename, as_attachment=True)
+
+
 if __name__ == "__main__":
     import os
     port = int(os.getenv("PORT", 5002))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    socketio.run(app, host="0.0.0.0", port=port, debug=True, allow_unsafe_werkzeug=True)
 

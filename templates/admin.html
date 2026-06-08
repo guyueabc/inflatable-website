@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>管理后台 — InflatableModel.CN</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -331,6 +332,16 @@
             .panel-left { width: 100%; max-height: 200px; }
             .panel-right { width: 100%; max-height: 300px; border-left: none; border-top: 1px solid var(--border); }
         }
+        .msg-bubble { position: relative; }
+        .msg-download-btn {
+            position: absolute; top: 6px; right: 6px; width: 28px; height: 28px;
+            background: rgba(0,0,0,0.55); color: #fff; border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            text-decoration: none; font-size: 14px; font-weight: 700;
+            opacity: 0; transition: opacity 0.2s; z-index: 5;
+        }
+        .msg-bubble:hover .msg-download-btn { opacity: 1; }
+        .msg-download-btn:hover { background: var(--primary, #6366f1); }
     </style>
 </head>
 <body>
@@ -639,6 +650,35 @@ function switchPeriod(p) {
     let currentCustomerId = null;
     let adminImagePath = '';
 
+    // ── Socket.IO real-time messaging ──
+    const adminSocket = io({ transports: ["websocket", "polling"] });
+    adminSocket.on("new_message", (msg) => {
+        if (msg.customer_id === currentCustomerId) {
+            // Append message in real-time
+            const el = document.getElementById('chatMessages');
+            const hasImg = msg.image_path && msg.image_path.trim();
+            const cls = msg.sender === 'customer' ? 'customer' :
+                        msg.sender === 'system' ? 'system' : 'admin';
+            const av = msg.sender === 'customer' ? 'C' : 'A';
+            const cont = escapeHtml(msg.content || '').replace(/\n/g, '<br>');
+            const imgH = hasImg ? `<img src="${escapeAttr(msg.image_path)}" loading="lazy">` : '';
+            const downloadH = hasImg ? `<a href="/api/download${escapeAttr(msg.image_path)}" class="msg-download-btn" title="Download">⤓</a>` : '';
+            el.innerHTML += `
+                <div class="msg-row ${cls}">
+                    <div class="msg-avatar-sm">${av}</div>
+                    <div class="msg-bubble">
+                        <div>${cont}${imgH}${downloadH}</div>
+                        <div class="msg-time">${fmtTime(msg.created_at)}</div>
+                    </div>
+                </div>`;
+            el.scrollTop = el.scrollHeight;
+        }
+        // Refresh customer badge
+        if (msg.customer_id) {
+            loadCustomers();
+        }
+    });
+
     // ── Load customers ──
     async function loadCustomers() {
         try {
@@ -753,11 +793,12 @@ function switchPeriod(p) {
                 const av = m.sender === 'customer' ? 'C' : 'A';
                 const cont = escapeHtml(m.content || '').replace(/\n/g,'<br>');
                 const imgH = hasImg ? `<img src="${escapeAttr(m.image_path)}" loading="lazy">` : '';
+                const downloadH = hasImg ? `<a href="/api/download${escapeAttr(m.image_path)}" class="msg-download-btn" title="Download">⤓</a>` : '';
                 return `
                     <div class="msg-row ${cls}">
                         <div class="msg-avatar-sm">${av}</div>
                         <div class="msg-bubble">
-                            <div>${cont}${imgH}</div>
+                            <div>${cont}${imgH}${downloadH}</div>
                             <div class="msg-time">${fmtTime(m.created_at)}</div>
                         </div>
                     </div>`;
@@ -775,6 +816,20 @@ function switchPeriod(p) {
         const btn = document.querySelector('.btn-send-sm');
         if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
 
+        // Use Socket.IO when available (preferred for real-time delivery)
+        if (typeof io !== 'undefined') {
+            adminSocket.emit("send_message", {
+                customer_id: currentCustomerId,
+                content: content,
+                image_path: adminImagePath || ''
+            });
+            input.value = '';
+            removeAdminImg();
+            if (btn) { btn.disabled = false; btn.textContent = '\u53d1\u9001'; }
+            return;
+        }
+
+        // Fallback: HTTP API
         const formData = new FormData();
         formData.append('customer_id', currentCustomerId);
         formData.append('content', content);
