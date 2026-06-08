@@ -25,7 +25,12 @@ from flask import (
     send_from_directory,
     url_for,
 )
-from flask_session import Session
+try:
+    from flask_session import Session
+    HAS_FLASK_SESSION = True
+except ImportError:
+    Session = None
+    HAS_FLASK_SESSION = False
 
 import config
 import mailer
@@ -37,7 +42,8 @@ from admin_traffic import traffic_bp
 # 鈹€鈹€ App factory 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 app = Flask(__name__)
 app.config.from_object(config)
-Session(app)
+if Session is not None:
+    Session(app)
 app.jinja_env.auto_reload = True
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
