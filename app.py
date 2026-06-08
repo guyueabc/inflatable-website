@@ -34,7 +34,11 @@ except ImportError:
     Session = None
     HAS_FLASK_SESSION = False
 
-from flask_socketio import SocketIO, emit, join_room, leave_room
+try:
+    from flask_socketio import SocketIO, emit, join_room, leave_room
+    HAS_SOCKETIO = True
+except ImportError:
+    HAS_SOCKETIO = False
 
 import config
 import mailer
@@ -51,8 +55,10 @@ if Session is not None:
 app.jinja_env.auto_reload = True
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
-# Socket.IO — real-time messaging
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading", manage_session=False)
+# Socket.IO — real-time messaging (optional)
+socketio = None
+if HAS_SOCKETIO:
+    socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading", manage_session=False)
 
 # Register admin blueprints
 app.register_blueprint(chat_bp)
@@ -915,7 +921,8 @@ def api_task_status(task_id):
 
                 # 3) Try Socket.IO push to admin
                 try:
-                    socketio.emit("new_message", {
+                    if HAS_SOCKETIO and socketio:
+                        socketio.emit("new_message", {
                         "sender": "system",
                         "content": f"[AUTO] 3D generation FAILED for {customer_name}, image attached",
                         "image_path": input_image,
@@ -1262,69 +1269,71 @@ def api_my_models():
 
 # ═══════ Socket.IO Chat Events (Requirements 1) ═══════
 
-@socketio.on("connect")
-def on_connect():
-    """User/admin connects: join appropriate room"""
-    cid = session.get("customer_id")
-    if cid:
-        join_room(f"customer_{cid}")
-    if session.get("admin_logged_in"):
-        join_room("admin_room")
+if HAS_SOCKETIO:
+
+    @socketio.on("connect")
+    def on_connect():
+        """User/admin connects: join appropriate room"""
+        cid = session.get("customer_id")
+        if cid:
+            join_room(f"customer_{cid}")
+        if session.get("admin_logged_in"):
+            join_room("admin_room")
 
 
-@socketio.on("disconnect")
-def on_disconnect():
-    cid = session.get("customer_id")
-    if cid:
-        leave_room(f"customer_{cid}")
-    if session.get("admin_logged_in"):
-        leave_room("admin_room")
+    @socketio.on("disconnect")
+    def on_disconnect():
+        cid = session.get("customer_id")
+        if cid:
+            leave_room(f"customer_{cid}")
+        if session.get("admin_logged_in"):
+            leave_room("admin_room")
 
 
-@socketio.on("send_message")
-def on_send_message(data):
-    """User or admin sends a message, broadcast to both sides"""
-    cid = session.get("customer_id")
-    is_admin = session.get("admin_logged_in")
+    @socketio.on("send_message")
+    def on_send_message(data):
+        """User or admin sends a message, broadcast to both sides"""
+        cid = session.get("customer_id")
+        is_admin = session.get("admin_logged_in")
 
-    if not cid and not is_admin:
-        return
-
-    content = (data.get("content") or "").strip()
-    image_path = (data.get("image_path") or "").strip()
-
-    if not content and not image_path:
-        return
-
-    if is_admin:
-        cid = (data.get("customer_id") or "").strip()
-        if not cid:
+        if not cid and not is_admin:
             return
-        sender = "admin"
-    else:
-        sender = "customer"
 
-    with get_db() as conn:
-        conn.execute(
-            "INSERT INTO messages (customer_id, sender, content, image_path) VALUES (?, ?, ?, ?)",
-            (cid, sender, content, image_path),
-        )
+        content = (data.get("content") or "").strip()
+        image_path = (data.get("image_path") or "").strip()
 
-    with get_db() as conn:
-        row = conn.execute(
-            "SELECT created_at FROM messages WHERE customer_id=? ORDER BY id DESC LIMIT 1",
-            (cid,),
-        ).fetchone()
+        if not content and not image_path:
+            return
 
-    msg_data = {
-        "sender": sender,
-        "content": content,
-        "image_path": image_path,
-        "created_at": row["created_at"] if row else "",
-    }
+        if is_admin:
+            cid = (data.get("customer_id") or "").strip()
+            if not cid:
+                return
+            sender = "admin"
+        else:
+            sender = "customer"
 
-    emit("new_message", msg_data, room=f"customer_{cid}")
-    emit("new_message", dict(msg_data, customer_id=cid), room="admin_room")
+        with get_db() as conn:
+            conn.execute(
+                "INSERT INTO messages (customer_id, sender, content, image_path) VALUES (?, ?, ?, ?)",
+                (cid, sender, content, image_path),
+            )
+
+        with get_db() as conn:
+            row = conn.execute(
+                "SELECT created_at FROM messages WHERE customer_id=? ORDER BY id DESC LIMIT 1",
+                (cid,),
+            ).fetchone()
+
+        msg_data = {
+            "sender": sender,
+            "content": content,
+            "image_path": image_path,
+            "created_at": row["created_at"] if row else "",
+        }
+
+        emit("new_message", msg_data, room=f"customer_{cid}")
+        emit("new_message", dict(msg_data, customer_id=cid), room="admin_room")
 
 
 # ═══════ Magic Link (Requirement 2) ═══════
@@ -1478,5 +1487,8 @@ def api_download_model(filename):
 if __name__ == "__main__":
     import os
     port = int(os.getenv("PORT", 5002))
-    socketio.run(app, host="0.0.0.0", port=port, debug=True, allow_unsafe_werkzeug=True)
+    if HAS_SOCKETIO and socketio:
+        socketio.run(app, host="0.0.0.0", port=port, debug=True, allow_unsafe_werkzeug=True)
+    else:
+        app.run(host="0.0.0.0", port=port, debug=True)
 
