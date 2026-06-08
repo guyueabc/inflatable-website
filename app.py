@@ -55,8 +55,7 @@ os.makedirs(MODELS_DIR, exist_ok=True)
 os.makedirs(TEMP_DIR, exist_ok=True)
 
 # 鈹€鈹€ Database 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
-# Support Render persistent disk for database
-DB_PATH = os.environ.get("DATABASE_PATH", os.path.join(app.root_path, "data.db"))
+DB_PATH = os.path.join(app.root_path, "data.db")
 
 
 def get_db() -> sqlite3.Connection:
@@ -183,12 +182,7 @@ CREATE TABLE IF NOT EXISTS customers (
                 pass
 
 
-try:
-    init_db()
-except Exception as e:
-    import sys, traceback
-    print(f"init_db failed: {e}", file=sys.stderr)
-    traceback.print_exc()
+init_db()
 
 # 鈹€鈹€ In-memory stores 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 verification_codes: dict = {}
