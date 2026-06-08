@@ -362,6 +362,14 @@ def api_login():
         session["contact_name"] = name
 
     # Generate & send verification code
+    # Rate limit: 1 request per 60 seconds per email
+    existing_record = verification_codes.get(_session_id())
+    if existing_record and not existing_record.get("expired"):
+        elapsed = (datetime.utcnow() - existing_record.get("last_code_sent", datetime.min)).total_seconds()
+        if elapsed < 60:
+            remaining = int(60 - elapsed)
+            return jsonify({"ok": False, "error": f"Please wait {remaining} seconds before requesting a new code.", "retry_after": remaining}), 429
+
     code = generate_code(6)
     verification_codes[_session_id()] = {
         "email": email,
@@ -375,14 +383,29 @@ def api_login():
     smtp_configured = bool(config.MAIL_USERNAME and config.MAIL_PASSWORD)
     dev_code = None if smtp_configured else code
     if not sent:
-        print(f"[DEV MODE] Verification code for {email}: {code}")
-        if smtp_error:
-            print(f"[SMTP ERROR] {smtp_error}")
+        print(f"[SMTP FAILED] Verification code for {email}: {code} | Error: {smtp_error}")
+        if smtp_configured:
+            # SMTP was configured but failed — return error to user
+            return jsonify({
+                "ok": False,
+                "error": f"Failed to send verification email. Please try again later or contact support.",
+                "smtp_error": smtp_error,
+                "dev_code": code,  # Provide code as fallback so user can still verify
+            }), 503
+        else:
+            # SMTP not configured — dev mode
+            return jsonify({
+                "ok": True,
+                "verified": False,
+                "message": f"DEV MODE: Your code is {code}",
+                "dev_code": code,
+                "is_new": existing is None,
+            })
 
     return jsonify({
         "ok": True,
         "verified": False,
-        "message": "Verification code sent to your email." if smtp_configured else f"DEV MODE: Your code is {code}",
+        "message": "Verification code sent to your email.",
         "dev_code": dev_code,
         "is_new": existing is None,
     })
@@ -530,12 +553,20 @@ def api_resend():
     record["expired"] = False
     record["last_code_sent"] = datetime.utcnow()
 
-    sent = mailer.send_verification_code(record["email"], new_code)
+    sent, smtp_error = mailer.send_verification_code(record["email"], new_code)
+    smtp_configured = bool(config.MAIL_USERNAME and config.MAIL_PASSWORD)
     if sent:
         return jsonify({"ok": True, "message": "New code sent."})
     else:
-        print(f"[DEV MODE] Resent code for {record['email']}: {new_code}")
-        return jsonify({"ok": True, "message": "Dev mode: check terminal for code."})
+        print(f"[SMTP FAILED] Resend code for {record['email']}: {new_code} | Error: {smtp_error}")
+        if smtp_configured:
+            return jsonify({
+                "ok": False,
+                "error": f"Failed to send verification email. Please try again later.",
+                "dev_code": new_code,  # Fallback so user can still verify
+            }), 503
+        else:
+            return jsonify({"ok": True, "message": "Dev mode: check terminal for code.", "dev_code": new_code})
 
 
 # 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?

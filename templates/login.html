@@ -260,6 +260,15 @@
                 } else {
                     errEl.textContent = data.error || 'Login failed.';
                     errEl.style.display = 'block';
+                    // If SMTP failed but we have a fallback code, still show verify input
+                    if (data.dev_code && resp.status === 503) {
+                        currentVerifyEmail = email;
+                        document.getElementById('verifyEmailDisplay').textContent = email;
+                        document.getElementById('devCodeDisplay').textContent = 'Fallback code: ' + data.dev_code;
+                        document.getElementById('devCodeDisplay').style.display = 'block';
+                        document.getElementById('verifyGroup').classList.add('active');
+                        document.getElementById('verifyCode').focus();
+                    }
                 }
             } catch (err) {
                 errEl.textContent = 'Network error. Please try again.';
@@ -334,6 +343,11 @@
                 } else {
                     verrEl.textContent = data.error || 'Failed.';
                     verrEl.style.display = 'block';
+                    // If SMTP failed but we have fallback code
+                    if (data.dev_code && resp.status === 503) {
+                        document.getElementById('devCodeDisplay').textContent = 'Fallback code: ' + data.dev_code;
+                        document.getElementById('devCodeDisplay').style.display = 'block';
+                    }
                     link.style.pointerEvents = '';
                     link.style.opacity = '';
                 }

@@ -69,6 +69,10 @@ def send_verification_code(to_email: str, code: str) -> Tuple[bool, Optional[str
         msg.attach(MIMEText(text_body, "plain", "utf-8"))
         msg.attach(MIMEText(html_body, "html", "utf-8"))
 
+        # Extract bare email for envelope sender (SMTP servers may reject display-name format)
+        from_addr = config.MAIL_USERNAME  # Always use bare email for envelope
+        to_addrs = [to_email]
+
         context = ssl.create_default_context()
         if config.MAIL_USE_TLS:
             server = smtplib.SMTP(config.MAIL_SERVER, config.MAIL_PORT, timeout=15)
@@ -79,7 +83,7 @@ def send_verification_code(to_email: str, code: str) -> Tuple[bool, Optional[str
             server = smtplib.SMTP_SSL(config.MAIL_SERVER, config.MAIL_PORT, timeout=15, context=context)
 
         server.login(config.MAIL_USERNAME, config.MAIL_PASSWORD)
-        server.sendmail(config.MAIL_DEFAULT_SENDER, to_email, msg.as_string())
+        server.sendmail(from_addr, to_addrs, msg.as_string())
         server.quit()
         return True, None
 
