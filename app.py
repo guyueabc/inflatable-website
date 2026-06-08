@@ -52,7 +52,7 @@ app.jinja_env.auto_reload = True
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 # Socket.IO — real-time messaging
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet", manage_session=False)
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading", manage_session=False)
 
 # Register admin blueprints
 app.register_blueprint(chat_bp)
