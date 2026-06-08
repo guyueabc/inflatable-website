@@ -57,9 +57,8 @@ def log_admin_action(action, target_customer="", detail=""):
 
 def get_db_path():
     """Get the database file path."""
-    import config as cfg
     import os
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), cfg.DATABASE)
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "data.db")
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
