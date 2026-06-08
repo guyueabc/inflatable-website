@@ -350,7 +350,6 @@
         <div class="panel-left-header">
             <h2>客户列表</h2>
             <div style="display:flex;align-items:center;gap:8px;">
-                <a href="/admin/traffic" style="font-size:.75rem;color:#6366f1;text-decoration:none;font-weight:500;">流量统计 →</a>
                 <button class="btn-logout" onclick="fetch('/api/admin/logout',{method:'POST'}).then(()=>location.reload())">退出</button>
             </div>
         </div>
@@ -635,8 +634,6 @@
 
     loadCustomers();
 </script>
-</body>
-</html>
 
 <div class="panel-right" id="panelRight">
         <div class="right-tabs">
@@ -893,13 +890,17 @@
 
     loadCustomers();
 </script>
-</body>
-</html>
 
     </div>
     <div id="tabTraffic" style="display:none;flex:1;overflow:hidden;">
         <div class="traffic-container">
-style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;"><button class="period-btn" id="btnDay" onclick="switchPeriod('day')">今日</button><button class="period-btn active" id="btnWeek" onclick="switchPeriod('week')">本周</button><button class="period-btn" id="btnMonth" onclick="switchPeriod('month')">本月</button><button class="period-btn" id="btnYear" onclick="switchPeriod('year')">今年</button></div><div style="color:#94a3b8;font-size:.75rem;margin-bottom:12px;" id="dateRange"></div><div style="color:#ef4444;font-size:.75rem;margin-bottom:8px;" id="statsError"></div><div class="traffic-stats">
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;"><button class="period-btn" id="btnDay" onclick="switchPeriod('day')">今日</button><button class="period-btn active" id="btnWeek" onclick="switchPeriod('week')">本周</button><button class="period-btn" id="btnMonth" onclick="switchPeriod('month')">本月</button><button class="period-btn" id="btnYear" onclick="switchPeriod('year')">今年</button></div><div style="color:#94a3b8;font-size:.75rem;margin-bottom:12px;" id="dateRange"></div><div style="color:#ef4444;font-size:.75rem;margin-bottom:8px;" id="statsError"></div>
+            <div id="emptyTrafficState" style="display:none;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:#94a3b8;text-align:center;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+                <p style="margin-top:16px;font-size:.9375rem;font-weight:500;">暂无流量数据</p>
+                <p style="margin-top:6px;font-size:.8125rem;color:#64748b;">当有访客浏览网站后，统计数据将在此显示</p>
+            </div>
+            <div class="traffic-stats">
                 <div class="traffic-stat"><div class="num" id="tPV">0</div><div class="lbl">PV（浏览）</div></div>
                 <div class="traffic-stat"><div class="num" id="tUV">0</div><div class="lbl">UV（访客）</div></div>
                 <div class="traffic-stat"><div class="num" id="tTotal">0</div><div class="lbl">累计总PV</div></div>
@@ -951,10 +952,22 @@ function switchPeriod(p) {
             if (data.error && !data.ok) { document.getElementById("statsError").textContent = data.error; return; }
             document.getElementById("statsError").textContent = "";
 
-            document.getElementById("tPV").textContent = data.pv || 0;
-            document.getElementById("tUV").textContent = data.uv || 0;
-            document.getElementById("tTotal").textContent = data.total_all || 0;
+            const pv = data.pv || 0;
+            const uv = data.uv || 0;
+            const total = data.total_all || 0;
+
+            document.getElementById("tPV").textContent = pv;
+            document.getElementById("tUV").textContent = uv;
+            document.getElementById("tTotal").textContent = total;
             document.getElementById("dateRange").textContent = data.date_range || "";
+
+            // Show empty state if no data at all
+            const emptyEl = document.getElementById("emptyTrafficState");
+            if (pv === 0 && uv === 0 && total === 0) {
+                if (emptyEl) emptyEl.style.display = "flex";
+            } else {
+                if (emptyEl) emptyEl.style.display = "none";
+            }
 
             const wow = data.pv_dod ?? data.pv_wow ?? data.pv_mom ?? data.pv_yoy ?? 0;
             const yoy = data.pv_yoy ?? 0;

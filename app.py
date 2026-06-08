@@ -1092,14 +1092,11 @@ def admin_page():
 def admin_traffic_page():
     if not session.get('admin_logged_in'):
         return render_template('admin_login.html')
-    return render_template('admin_traffic.html')
+    return render_template('admin.html')
 
 @app.route('/test')
 def test_page():
     return render_template('test.html')
-    if not session.get("admin_logged_in"):
-        return render_template("admin_login.html")
-    return render_template("admin_traffic.html")
 
 @app.route("/api/notifications")
 def api_notifications():
