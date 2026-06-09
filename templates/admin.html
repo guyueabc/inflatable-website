@@ -816,8 +816,8 @@ function switchPeriod(p) {
         const btn = document.querySelector('.btn-send-sm');
         if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
 
-        // Use Socket.IO when available (preferred for real-time delivery)
-        if (typeof io !== 'undefined') {
+        // Use Socket.IO when connected (preferred for real-time delivery)
+        if (typeof io !== 'undefined' && adminSocket.connected) {
             adminSocket.emit("send_message", {
                 customer_id: currentCustomerId,
                 content: content,

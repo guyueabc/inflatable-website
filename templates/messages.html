@@ -590,7 +590,20 @@
 
         if (!content && !imagePath) return;
 
-        socket.emit("send_message", { content, image_path: imagePath });
+        // Try Socket.IO first, fall back to HTTP API
+        if (socket.connected) {
+            socket.emit("send_message", { content, image_path: imagePath });
+        } else {
+            // Fallback: HTTP POST
+            try {
+                await fetch('/api/messages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content, image_path: imagePath })
+                });
+                await loadMsgs();
+            } catch(e) { console.error('Send failed:', e); }
+        }
         input.value = '';
         input.style.height = 'auto';
         removeImage();
