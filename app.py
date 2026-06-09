@@ -64,6 +64,12 @@ if HAS_SOCKETIO:
 app.register_blueprint(chat_bp)
 app.register_blueprint(traffic_bp)
 
+# ── Debug: catch-all error handler (REMOVE after debugging) ──
+import traceback as _tb
+@app.errorhandler(500)
+def _debug_500(e):
+    return f"<pre>500 Server Error\n\n{_tb.format_exc()}</pre>", 500
+
 UPLOAD_DIR = os.path.join(app.root_path, "uploads")
 CHAT_UPLOAD_DIR = os.path.join(UPLOAD_DIR, "chat")
 MODELS_DIR = os.path.join(UPLOAD_DIR, "models")
