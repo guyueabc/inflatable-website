@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Messages — InflatableModel.CN</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <style>
         :root {
             --bg: #0f172a;
@@ -701,7 +700,10 @@
     });
 
     loadMsgs();
-    // ❌ setInterval polling removed — Socket.IO handles real-time messages
+    // HTTP polling fallback (3000ms) when Socket.IO not available
+    setInterval(() => {
+        if (!socket || !socket.connected) loadMsgs();
+    }, 3000);
 
     // Auto-resize textarea
     document.getElementById('msgInput').addEventListener('input', function() {
