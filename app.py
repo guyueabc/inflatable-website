@@ -200,6 +200,18 @@ CREATE TABLE IF NOT EXISTS customers (
             except sqlite3.OperationalError:
                 pass
 
+    # V7 migration: IP memory + Magic Link (Requirement 2 & 4)
+    with get_db() as conn:
+        for col, col_def in [
+            ("last_ip", "TEXT DEFAULT ''"),
+            ("magic_token", "TEXT DEFAULT ''"),
+            ("magic_token_expires", "TEXT DEFAULT ''"),
+        ]:
+            try:
+                conn.execute(f"ALTER TABLE customers ADD COLUMN {col} {col_def}")
+            except sqlite3.OperationalError:
+                pass
+
 
 init_db()
 
