@@ -6,6 +6,7 @@ Login / Register / Google Auth / 3D Generation (one-time) / Chat with images / T
 import json
 import os
 import random
+import re
 import secrets
 import sqlite3
 import string
@@ -63,12 +64,6 @@ if HAS_SOCKETIO:
 # Register admin blueprints
 app.register_blueprint(chat_bp)
 app.register_blueprint(traffic_bp)
-
-# ── Debug: catch-all error handler (REMOVE after debugging) ──
-import traceback as _tb
-@app.errorhandler(500)
-def _debug_500(e):
-    return f"<pre>500 Server Error\n\n{_tb.format_exc()}</pre>", 500
 
 UPLOAD_DIR = os.path.join(app.root_path, "uploads")
 CHAT_UPLOAD_DIR = os.path.join(UPLOAD_DIR, "chat")
