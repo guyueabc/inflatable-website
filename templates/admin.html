@@ -650,34 +650,35 @@ function switchPeriod(p) {
     let currentCustomerId = null;
     let adminImagePath = '';
 
-    // ── Socket.IO real-time messaging ──
-    const adminSocket = io({ transports: ["websocket", "polling"] });
-    adminSocket.on("new_message", (msg) => {
-        if (msg.customer_id === currentCustomerId) {
-            // Append message in real-time
-            const el = document.getElementById('chatMessages');
-            const hasImg = msg.image_path && msg.image_path.trim();
-            const cls = msg.sender === 'customer' ? 'customer' :
-                        msg.sender === 'system' ? 'system' : 'admin';
-            const av = msg.sender === 'customer' ? 'C' : 'A';
-            const cont = escapeHtml(msg.content || '').replace(/\n/g, '<br>');
-            const imgH = hasImg ? `<img src="${escapeAttr(msg.image_path)}" loading="lazy">` : '';
-            const downloadH = hasImg ? `<a href="/api/download${escapeAttr(msg.image_path)}" class="msg-download-btn" title="Download">⤓</a>` : '';
-            el.innerHTML += `
-                <div class="msg-row ${cls}">
-                    <div class="msg-avatar-sm">${av}</div>
-                    <div class="msg-bubble">
-                        <div>${cont}${imgH}${downloadH}</div>
-                        <div class="msg-time">${fmtTime(msg.created_at)}</div>
-                    </div>
-                </div>`;
-            el.scrollTop = el.scrollHeight;
-        }
-        // Refresh customer badge
-        if (msg.customer_id) {
-            loadCustomers();
-        }
-    });
+    // ── Socket.IO real-time messaging (graceful degradation) ──
+    let adminSocket = null;
+    if (typeof io !== 'undefined') {
+        try {
+            adminSocket = io({ transports: ["websocket", "polling"] });
+            adminSocket.on("new_message", (msg) => {
+                if (msg.customer_id === currentCustomerId) {
+                    const el = document.getElementById('chatMessages');
+                    const hasImg = msg.image_path && msg.image_path.trim();
+                    const cls = msg.sender === 'customer' ? 'customer' :
+                                msg.sender === 'system' ? 'system' : 'admin';
+                    const av = msg.sender === 'customer' ? 'C' : 'A';
+                    const cont = escapeHtml(msg.content || '').replace(/\n/g, '<br>');
+                    const imgH = hasImg ? `<img src="${escapeAttr(msg.image_path)}" loading="lazy">` : '';
+                    const downloadH = hasImg ? `<a href="/api/download${escapeAttr(msg.image_path)}" class="msg-download-btn" title="Download">⤓</a>` : '';
+                    el.innerHTML += `
+                        <div class="msg-row ${cls}">
+                            <div class="msg-avatar-sm">${av}</div>
+                            <div class="msg-bubble">
+                                <div>${cont}${imgH}${downloadH}</div>
+                                <div class="msg-time">${fmtTime(msg.created_at)}</div>
+                            </div>
+                        </div>`;
+                    el.scrollTop = el.scrollHeight;
+                }
+                if (msg.customer_id) {
+                    loadCustomers();
+                }
+            });
 
     // ── Load customers ──
     async function loadCustomers() {
@@ -817,7 +818,7 @@ function switchPeriod(p) {
         if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
 
         // Use Socket.IO when connected (preferred for real-time delivery)
-        if (typeof io !== 'undefined' && adminSocket.connected) {
+        if (adminSocket && adminSocket.connected) {
             adminSocket.emit("send_message", {
                 customer_id: currentCustomerId,
                 content: content,

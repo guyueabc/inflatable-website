@@ -472,23 +472,32 @@
     let msgs = [];
     let pendingImagePath = '';
 
-    // ── Socket.IO real-time chat ──
-    const socket = io({ transports: ["websocket", "polling"] });
-
-    socket.on("connect", () => {
-        console.log("[Chat] Connected via Socket.IO");
-        loadMsgs();  // Load history once on connect
-    });
-
-    socket.on("disconnect", () => {
+    // ── Socket.IO real-time chat (graceful degradation) ──
+    let socket = null;
+    if (typeof io !== 'undefined') {
+        try {
+            socket = io({ transports: ["websocket", "polling"] });
+            socket.on("connect", () => {
+                console.log("[Chat] Connected via Socket.IO");
+                loadMsgs();
+            });
+            socket.on("disconnect", () => {
+                const statusEl = document.getElementById("chatStatus");
+                if (statusEl) { statusEl.textContent = "Reconnecting..."; statusEl.style.color = "#f59e0b"; }
+            });
+            socket.on("new_message", (msg) => {
+                appendMessage(msg);
+                scrollToBottom();
+            });
+        } catch(e) {
+            console.warn("[Chat] Socket.IO init failed, using HTTP fallback:", e.message);
+            socket = null;
+        }
+    } else {
+        console.warn("[Chat] Socket.IO CDN not loaded, using HTTP fallback");
         const statusEl = document.getElementById("chatStatus");
-        if (statusEl) { statusEl.textContent = "Reconnecting..."; statusEl.style.color = "#f59e0b"; }
-    });
-
-    socket.on("new_message", (msg) => {
-        appendMessage(msg);
-        scrollToBottom();
-    });
+        if (statusEl) { statusEl.textContent = "HTTP mode"; statusEl.style.color = "#94a3b8"; }
+    }
 
     async function loadMsgs() {
         try {
@@ -591,7 +600,7 @@
         if (!content && !imagePath) return;
 
         // Try Socket.IO first, fall back to HTTP API
-        if (socket.connected) {
+        if (socket && socket.connected) {
             socket.emit("send_message", { content, image_path: imagePath });
         } else {
             // Fallback: HTTP POST
