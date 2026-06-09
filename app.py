@@ -262,17 +262,28 @@ def auto_login_from_token():
     client_ip = request.headers.get("CF-Connecting-IP", request.remote_addr)
     ip_prefix = ".".join(client_ip.split(".")[:3]) if client_ip else ""
 
-    with get_db() as conn:
-        row = conn.execute(
-            "SELECT id, email, name, last_ip FROM customers WHERE persistent_token=? AND token_expires > datetime('now','localtime')",
-            (token,),
-        ).fetchone()
-    if row:
-        stored_ip = row["last_ip"] or ""
+    try:
+        with get_db() as conn:
+            row = conn.execute(
+                "SELECT id, email, name, last_ip FROM customers WHERE persistent_token=? AND token_expires > datetime('now','localtime')",
+                (token,),
+            ).fetchone()
+    except sqlite3.OperationalError:
+        # last_ip column may not exist yet
+        with get_db() as conn:
+            row = conn.execute(
+                "SELECT id, email, name FROM customers WHERE persistent_token=? AND token_expires > datetime('now','localtime')",
+                (token,),
+            ).fetchone()
+        stored_ip = ""
+        stored_prefix = ""
+    else:
+        stored_ip = row["last_ip"] or "" if row else ""
         stored_prefix = ".".join(stored_ip.split(".")[:3]) if stored_ip else ""
 
-        # IP prefix match or exact match -> allow auto-login
-        if ip_prefix == stored_prefix or client_ip == stored_ip:
+    if row:
+        # Only require IP match if we actually have IP data
+        if not stored_ip or ip_prefix == stored_prefix or client_ip == stored_ip:
             session["customer_id"] = row["id"]
             session["contact_email"] = row["email"]
             session["contact_name"] = row["name"]
@@ -416,8 +427,13 @@ def api_login():
     }
 
     # Generate magic link token for one-click login
-    magic_token = generate_magic_token(customer_id if existing is None else existing["id"])
-    magic_link = url_for("magic_login", token=magic_token, email=email, _external=True)
+    magic_token = None
+    magic_link = ""
+    try:
+        magic_token = generate_magic_token(customer_id if existing is None else existing["id"])
+        magic_link = url_for("magic_login", token=magic_token, email=email, _external=True)
+    except Exception as e:
+        print(f"[MAGIC LINK] Failed to generate: {e}")
 
     sent, smtp_error = mailer.send_verification_code(email, code, magic_link=magic_link)
     smtp_configured = bool(config.MAIL_USERNAME and config.MAIL_PASSWORD)
@@ -561,11 +577,18 @@ def api_verify():
         # Generate persistent auto-login token (30 days)
         persistent_token = uuid.uuid4().hex + secrets.token_hex(16)
         expires = (datetime.utcnow() + timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S")
-        with get_db() as conn:
-            conn.execute(
-                "UPDATE customers SET verified=1, persistent_token=?, token_expires=?, last_ip=? WHERE id=?",
-                (persistent_token, expires, client_ip, cid),
-            )
+        try:
+            with get_db() as conn:
+                conn.execute(
+                    "UPDATE customers SET verified=1, persistent_token=?, token_expires=?, last_ip=? WHERE id=?",
+                    (persistent_token, expires, client_ip, cid),
+                )
+        except sqlite3.OperationalError:
+            with get_db() as conn:
+                conn.execute(
+                    "UPDATE customers SET verified=1, persistent_token=?, token_expires=? WHERE id=?",
+                    (persistent_token, expires, cid),
+                )
         resp = make_response(jsonify({"ok": True, "message": "Email verified successfully."}))
         resp.set_cookie("auto_login", persistent_token, max_age=30 * 24 * 3600, httponly=True, samesite="Lax")
         return resp
